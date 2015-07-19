@@ -1,0 +1,935 @@
+<html>
+
+<h2>Simple Event Correlator FAQ</h2>
+
+Author: Risto Vaarandi<br>
+Updated: November 9, 2013<p>
+
+<a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
+
+<a href="#2">Q2</a>: How can I use SEC with rsyslog?<br>
+
+<a href="#3">Q3</a>: How can I use SEC with syslog-ng?<br>
+
+<a href="#4">Q4</a>: Does SEC support network topology databases of 
+HP OpenView, Tivoli, or some other platforms? How can I use network topology 
+information in the event correlation process?<br>
+
+<a href="#5">Q5</a>: How can I integrate SEC with HP OpenView Network 
+Node Manager?<br>
+
+<a href="#6">Q6</a>: How can I integrate SEC with HP OpenView Operations?<br>
+
+<a href="#7">Q7</a>: How can I use SEC with Graphite? <br>
+
+<a href="#8">Q8</a>: How can I convert Swatch rules into SEC rules? <br>
+
+<a href="#9">Q9</a>: I have set up a named pipe as input file with 
+--input option, but SEC is unable to open it, although SEC has a permission 
+to read it. Why doesn't my setup work? <br>
+
+<a href="#10">Q10</a>: What is the difference between rules 
+and event correlation operations? <br>
+
+<a href="#11">Q11</a>: How can I see what event correlation operations
+are currently active? How can I see the state of individual event
+correlation operations? How can I see what SEC is currently doing? <br>
+
+<a href="#12">Q12</a>: How does 'reset' action work? <br>
+
+<a href="#13">Q13</a>: How can I use regular expression modifiers in
+SEC rule definitions (like //i, //m, etc.)? <br>
+
+<a href="#14">Q14</a>: How can I load Perl modules that could be used at 
+SEC runtime? <br>
+
+<a href="#15">Q15</a>: How can I save contexts to disk when SEC 
+is shut down, and read them in after SEC has been restarted? <br>
+
+<a href="#16">Q16</a>: How can I set up bi-directional 
+communication between SEC and its subprocess that was started by 'spawn' 
+action?<br>
+
+<a href="#17">Q17</a>: How can I run 'shellcmd' actions in an ordered
+manner (i.e., an action is not started before the previous one has
+completed)? <br>
+
+<a href="#18">Q18</a>: I have started a long-running subprocess from 
+SEC, but when I send SIGHUP or SIGTERM to SEC, the subprocess will not receive 
+SIGTERM as it should. What can be done about it?<br>
+
+<a href="#19">Q19</a>: How can I write a rule for several input sources 
+that would be able to report the name of the source for matching lines? <br>
+
+<a href="#20">Q20</a>: How can I limit the run time of child processes? <br>
+
+<p>
+
+<hr>
+
+<a name="1">
+<b>Q1: How many sites are using SEC and how can I deploy it? </b>
+<p>
+
+A: It is very difficult to tell the exact number of users, because no 
+registration is required to download it :-) 
+Also, SEC has been packaged for major Linux and BSD distributions, and many
+users install it from the package, instead of downloading the source.
+<p>
+SEC can be deployed in a wide variety of ways. There is a common misconception
+among some people that only one instance of SEC can be running at a time
+(which might eventually become a performance bottleneck). In fact,
+unlike a number of system services, you can run many SEC instances in daemon
+mode simultaneously. 
+Also, apart from daemon mode, SEC can be used as a UNIX command line tool 
+and employed in shell pipelines (e.g., like <i>grep</i> or <i>sed</i>),
+and there is no limit to the number of instances executing at the same time.
+<p>
+SEC is a single-threaded application, since by its design,
+event correlation state is shared over *all* input sources and rulesets.
+Unfortunately, maintaining consistent shared event correlation state 
+between multiple threads is a non-trivial problem. 
+However, if several independent event processing flows can be identified,
+each flow can be assigned to a separate process which has its own
+event correlation state.
+Finally, if data sharing is needed in a multi-process setup,
+any SEC process can easily spawn several additional instances
+and communicate with them through a pipe interface.
+
+<p>
+
+<a name="2">
+<b>Q2: How can I use SEC with rsyslog? </b>
+<p>
+
+A: If you want to configure SEC to monitor log files which are created by
+rsyslog, simply use --input command line options for specifying the paths
+to log files, and --conf command line options for providing appropriate
+rule files for log file monitoring.
+<p>
+However, if you would like to pass events from rsyslog to SEC over 
+the pipe interface, you would have to provide specific configuration
+options for rsyslog and SEC. The following example has been tested
+with SEC-2.7.4 and rsyslog-v5.
+<p>
+These rsyslog configuration directives start /usr/local/bin/sec.sh
+with its standard input connected to a pipe,
+and use the pipe for feeding all syslog messages with either <i>auth</i>- or 
+<i>authpriv</i>-facility to the standard input of /usr/local/bin/sec.sh:
+<p>
+<i>
+$ModLoad omprog
+<p>
+$ActionOMProgBinary /usr/local/bin/sec.sh
+<br>
+auth,authpriv.* :omprog:
+</i>
+<p>
+In /usr/local/bin/sec.sh, provide a full command line for starting
+SEC, for example:
+<p>
+<i>
+#!/bin/bash
+<p>
+exec /usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-
+</i>
+<p>
+Please note that you have to provide SEC with the --notail option, 
+in order to ensure it terminates when rsyslog closes the pipe.
+Otherwise, a redundant SEC instance would stay around after
+rsyslog has been restarted or shut down.
+<p>
+If you would like to send events to local copy of rsyslog, you can run
+external tools like /usr/bin/logger from SEC. Also, on many platforms 
+(e.g., Linux) rsyslog accepts messages from local programs over a UNIX 
+domain socket. 
+For example, the following SEC action sends to rsyslog an event 
+"This is a test" which is issued with the tag <i>mytest</i>, 
+<i>daemon</i>-facility and <i>info</i>-level. The example assumes that
+rsyslog receives incoming messages from /dev/log socket in datagram mode:
+<p>
+action=udgram /dev/log <30>mytest: This is a test
+
+<p>
+
+<a name="3">
+<b>Q3: How can I use SEC with syslog-ng? </b>
+<p>
+
+A: If you would like to monitor log files created by syslog-ng, use
+--input command line options for specifying their locations, and
+use --conf options for providing rule files for log file monitoring.
+<p>
+In order to send events from syslog-ng to SEC over the pipe interface,
+use the program() destination driver. For example, with the following 
+configuration syslog-ng uses a pipe for feeding SEC with all messages 
+received over the port 514/udp (tested with SEC-2.7.4 and syslog-ng-3.3):
+<p>
+<i>
+source net { udp(); };
+<p>
+destination sec { program("/usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-"); };
+<p>
+log { source(net); destination(sec); };
+</i>
+<p>
+Also note that SEC must be provided with the --notail option, in order to
+ensure it terminates when syslog-ng closes the pipe.
+<p>
+
+<a name="4">
+<b>Q4: Does SEC support network topology databases of HP OpenView, Tivoli, 
+or some other platforms? How can I use network topology information in the
+event correlation process? </b>
+<p>
+
+A: There is no support for any specific network topology database format 
+in the SEC core. However, SEC allows you to integrate 
+custom scripts and Perl code into SEC event flow (e.g., see SingleWithScript 
+rule and 'eval' action in SEC man page). Basically, you have to write a script 
+or Perl code that is able to query the topology database you have, and then 
+use it from rules.
+
+<p>
+
+<a name="5">
+<b>Q5: How can I integrate SEC with HP OpenView Network Node Manager?
+</b>
+<p>
+
+A: Network Node Manager 5.0 and previous releases write all the events they
+see to trapd.log file. Therefore, you just have to specify this file as input 
+for SEC. Starting from version 6.0, Network Node Manager does no longer
+produce trapd.log file by default. To force it to do so, you have to edit
+pmd.lrf file, adding -SOV_EVENT;t option to the file:
+<p>
+OVs_YES_START::-SOV_EVENT;t:OVs_WELL_BEHAVED:15:PAUSE
+<p>
+After that, execute following commands:
+<p>
+ovaddobj pmd.lrf <br>
+ovstop pmd<br>
+ovstart pmd<br>
+<p>
+For producing output events from SEC, you can use Network Node Manager's
+ovevent utility. For detailed information, see ov_event(5), lrf(4), and 
+ovevent(1) manual pages.
+
+<p>
+
+<a name="6">
+<b>Q6: How can I integrate SEC with HP OpenView Operations?
+</b>
+<p>
+
+A: Use itostream plugin that is part of the SEC package. The plugin has
+been tested with Operations 5.3, 6.0, 7.0 and 8.1, and has been found working
+with HP-UX and Solaris management servers, but also with HP-UX, Solaris,
+and Linux agents.
+<p>
+To use the plugin, you first need to compile it. The compiling
+instructions are located in the itostream.c file, but if you are compiling
+on management server, the following line should be sufficient:
+<p>
+gcc -o itostream itostream.c -L/opt/OV/lib -lopcsv -lnsp
+<p>
+On agents use -DAGENT flag, e.g.,
+<p>
+gcc -o itostream itostream.c -DAGENT -L/opt/OV/lib -lopc -lnsp
+<p>
+On some agent platforms the /opt/OV/lib directory is not included in the
+shared library search path, which results an error message when you try to
+run itostream binary. To include /opt/OV/lib in search path, use
+-Xlinker -rpath options:
+<p>
+gcc -o itostream itostream.c -DAGENT -L/opt/OV/lib -lopc -lnsp 
+  -Xlinker -rpath /opt/OV/lib
+<p>
+Also, some Operations agent platforms don't have /opt/OV/lib/libopc.* 
+library, which is normally just a symbolic link to
+/opt/OV/lib/libopc_r.* library. In that case try
+to use the following commandline:
+<p>
+gcc -o itostream itostream.c -DAGENT -L/opt/OV/lib -lopc_r -lnsp
+<p>
+(i.e., use -lopc_r option instead of -lopc).
+<p>
+In order to use itostream binary on the management server, you need to
+enable output for external MSI plugins. To do that, open the Operations GUI
+Node Bank, and go to Actions->Server->Configure. Then check "Enable Output"
+option, and close the window.
+<p>
+If you wish to use itostream on particular Operations managed node, right-click
+on the managed node icon, and go to Modify->Advanced Options. Then check 
+"Enable Output" option, and close the window.
+<p>
+Itostream takes 2 parameters: the name of MSI interface (you can use
+arbitrary string here, like "test" or "mymsi"), and timeout N -
+when itostream has seen no data for the last N seconds, it will try to
+reconnect to the local Operations agent or Operations management server. After
+startup, itostream will write Operations messages to its standard output, one
+message per line. Itostream's standard output can be directed to a pipe or
+file, which can be input for SEC. Here are some sample lines from itostream
+output:
+<p>
+time=1025713202 sev=normal node=server1.mydomain app=TEST obj=TEST msg_grp=Network msg_text=node up <br>
+time=1025713224 sev=major node=server2.mydomain app=opsystem obj=disk msg_grp=OS msg_text=Disk fault <br>
+time=1025713227 sev=critical node=server2.mydomain app=opsystem obj=server msg_grp=OS msg_text=node down
+
+<p>
+
+<a name="7">
+<b>Q7: How can I use SEC with Graphite?</b>
+<p>
+A: You can use the 'tcpsock' action for sending data to Graphite. By default,
+Graphite listens on the port 2003/tcp for lines in plaintext format, where
+each line has the following layout: 
+<p>
+<i>metric_path metric_value metric_timestamp</i>
+<p>
+For example, the line <i>switch.box2.cpu.util 100 1370349000</i> could 
+represent the fact that the CPU utilization of the switch box2 was 100% at 
+June 4, 2013 12:30 UTC (1370349000 seconds since January 1, 1970, 00:00 UTC).
+The following ruleset keeps track of SSH login failures from different client
+systems, and reports the number of login failures per client IP address to
+Graphite:
+<p>
+type=Single
+<br>
+ptype=RegExp
+<br>
+pattern=sshd\[\d+\]: Failed \S+ for (?:invalid user )?\S+ from ([\d.]+) port \d+ ssh2$
+<br>
+desc=SSH login failure from $1
+<br>
+action=lcall %o $1 -> ( sub { ++$sshlogin_failed{$_[0]}; } )
+<p>
+type=Calendar
+<br>
+time=*/5 * * * *
+<br>
+desc=report SSH login failure statistics
+<br>
+action=lcall %temp -> ( sub { return keys %sshlogin_failed; } ); \ 
+<br>
+&nbsp;&nbsp; fill CLIENTS %temp; \
+<br>
+&nbsp;&nbsp; lcall %temp -> ( sub { return values %sshlogin_failed; } ); \ 
+<br>
+&nbsp;&nbsp; fill COUNTS %temp; \
+<br>
+&nbsp;&nbsp; lcall %n -> ( sub { %sshlogin_failed = (); return "\n"; } ); \ 
+<br>
+&nbsp;&nbsp; getsize %size CLIENTS; while %size ( \
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; shift CLIENTS %client; shift COUNTS %count; \
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; tcpsock localhost:2003 ssh.login.failure.%client %count %u%n; \
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; getsize %size CLIENTS )
+<p>
+Login failure counts for clients are kept in the Perl hash table
+%sshlogin_failed which is maintained by both rules.
+The first rule matches an SSH login failure event, extracting the IP address
+of the client and incrementing the entry for the given IP in the 
+%sshlogin_failed hash table.
+The second rule reports login failures per client IP addresses once in
+every 5 minutes. The rule also resets the %sshlogin_failed hash table,
+in order to start counting from scratch for the following 5 minutes.
+<p>
+During reporting, the second rule extracts client IP addresses and login 
+failure counts from the %sshlogin_failed hash table,
+storing these data to contexts CLIENTS and COUNTS, respectively.
+Note that client IP addresses and respective counts are stored in the same
+order (this is ensured by Perl's keys() and values() functions). 
+For example, if the second element in the store of the CLIENTS context is 
+10.1.1.1, it is also the second element in the store of COUNTS which reflects
+login failures from 10.1.1.1.
+In order to send collected data to Graphite, the 'while' action is used
+to loop over CLIENTS and COUNTS contexts, shifting elements out from both
+contexts during each iteration and sending them to Graphite with the 'tcpsock'
+action. The loop is executed until the store of the CLIENTS context contains
+no elements (the 'getsize' action returns 0).
+<p>
+Each 'tcpsock' action takes the client IP address and login failure count,
+and forms the following data string: 
+<p>
+ssh.login.failure.<i>IPaddress</i> <i>count</i> <i>timestamp</i><b>newline</b>
+<p>
+The timestamp is obtained from the %u action list variable which is 
+automatically maintained by SEC, while newline is assigned to the %n action
+list variable with the 'lcall' action (the same action resets
+the %sshlogin_failed hash table).
+After creating the data string, the 'tcpsock' action sends it to the port
+2003/tcp of the Graphite server (the example assumes the server is running
+at the local host).
+
+<p>
+
+<a name="8">
+<b>Q8: How can I convert Swatch rules into SEC rules?</b>
+<p>
+A: The Swatch rule that consists of a regular expression and action without
+thresholding conditions can be expressed with a SEC Single rule. For example,
+the Swatch rule 
+<p>
+watchfor /sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$/
+<br>
+exec echo Login failure for user $1 
+<p>
+can be converted to
+<p>
+type=Single
+<br>
+ptype=Regexp
+<br>
+pattern=sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$
+<br>
+desc=login failure
+<br>
+action=write - Login failure for user $1
+<p>
+Suppose you have the following Swatch thresholding rule:
+<p>
+watchfor /sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$/
+<br>
+threshold track_by=$1,type=both,count=3,seconds=60
+<br>
+exec echo Three login failures for user $1 within 1m
+<p>
+This rule matches SSH login failure events and writes a warning to standard
+output if three failed logins have been observed for the *same* user within
+60 seconds.
+<p>
+Swatch thresholding rules can be tuned with setting the following parameters:
+<p>
+track_by -- scope of counting<br>
+count -- event threshold<br>
+seconds -- counting window<br>
+type -- type of thresholding<br>
+<p>
+The 'type' parameter can have the following values:
+<p>
+limit -- react to the first 'count' events with an action and ignore 
+the following ones (e.g., if count=3, react to 1st, 2nd and 3rd event)
+<br>
+threshold -- react to each 'count'-th event with an action 
+(e.g., if count=3, react to 3rd, 6th, 9th, ... event)
+<br>
+both -- react to 'count'-th event with an action (e.g., if count=3, 
+react to the 3rd event only)
+<p>
+The 'both' thresholding mode maps naturally to the SingleWithThreshold
+rule of SEC. For example, the Swatch rule 
+<p>
+watchfor /sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$/
+<br>
+threshold track_by=$1,type=both,count=3,seconds=60
+<br>
+exec echo Three login failures for user $1 within 1m
+<p>
+can be written as follows:
+<p>
+type=SingleWithThreshold
+<br>
+ptype=Regexp
+<br>
+pattern=sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$
+<br>
+desc=$1
+<br>
+action=write - Three login failures for user $1 within 1m
+<br>
+thresh=3
+<br>
+window=60
+<p>
+In order to mimic the 'threshold' mode of Swatch, change the 'action'
+parameter of the above SEC rule in the following way:
+<p>
+action=write - Three login failures for user $1 within 1m; reset 0
+<p>
+For thresholding similar to the Swatch 'limit' mode, use the EventGroup rule 
+of SEC: 
+<p>
+type=EventGroup
+<br>
+ptype=RegExp
+<br>
+pattern=sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$
+<br>
+context=!SUPPRESS_SSH_USER_$1
+<br>
+count=write - Login failure for user $1
+<br>
+desc=$1
+<br>
+action=create SUPPRESS_SSH_USER_$1
+<br>
+thresh=3
+<br>
+window=60
+<br>
+end=delete SUPPRESS_SSH_USER_$1
+<p>
+The 'count' parameter of this rule executes an action on each matching
+event, and the 'action' parameter sets up a suppressing context when 3 events
+have been seen for the same user name. The context disables further matching 
+for the given user name and is removed by the 'end' parameter when 
+counting operation terminates for this user name.
+<p>
+Note that if the Swatch rule has the 'type' parameter set to 'limit' or 'both',
+and the 'count' parameter is set to 1, the rule executes an action for
+the first event instance and suppresses the following instances in the given
+time window. Such rules are easiest to express with SEC SingleWithSuppress
+rules, for example:
+<p>
+type=SingleWithSuppress
+<br>
+ptype=Regexp
+<br>
+pattern=sshd\[\d+\]: Failed .+ for (\w+) from [\d.]+ port \d+ ssh2$
+<br>
+desc=$1
+<br>
+action=write - Login failure for user $1, suppressing repeated events for the same user during 1m
+<br>
+window=60
+
+<p>
+
+<a name="9">
+<b>Q9: I have set up a named pipe as input file with 
+--input option, but SEC is unable to open it, although SEC has a permission 
+to read it. Why doesn't my setup work? </b>
+<p>
+
+A: In order to keep the pipe open at all times without the need to close
+and reopen it when the writer closes the pipe, SEC opens named pipes in 
+read-write mode by default. For changing this behavior, use the --norwfifo
+command line option.
+
+<p>
+
+<a name="10">
+<b>Q10: What is the difference between rules and event 
+correlation operations? </b>
+<p>
+
+A: Basically, rules are instructions to SEC that tell which event correlation
+to start and how to feed them with events. Rules are static in
+their nature - their number will not change at runtime, unless you have
+updated the configuration file(s) and sent SIGHUP or SIGABRT to SEC.
+In contrast, event correlation operations are dynamic - they are started by 
+rules and they terminate after their job is done.
+<p>
+There is no 1-1 relationship between the rules and event correlation
+operations - there can be many simultaneously running event correlation 
+operations that were all started by the same rule.
+<p>
+After the rule has started an event correlation operation, this event
+correlation operation needs to be distinguished from other operations.
+To do this, SEC assigns a key to the operation that is composed from
+configuration file name, rule ID, and the operation description string 
+(defined by the <i>desc</i> field of the rule). 
+<p>
+Say that you have configuration file my.conf with one rule in it:
+<p>
+type=SingleWithThreshold <br>
+ptype=RegExp <br>
+pattern=user (\S+) login failure on (\S+) <br>
+desc=Repeated login failures for user $1 on $2 <br> 
+action=shellcmd notify.sh "%s" <br>
+window=60 <br>
+thresh=3 <br>
+<p>
+Suppose that SEC observes input line "user admin login failure on tty1".
+This matches pattern 'user (\S+) login failure on (\S+)', and SEC will
+now build event correlation key for the observed event. After
+replacing $1 and $2 with actual values, the <i>desc</i> field evaluates to 
+the operation description string 
+"Repeated login failures for user admin on tty1". 
+Using the configuration file name, the rule ID, and the operation
+description string for building the event correlation key will yield
+the following value:
+<p>
+my.conf | 0 | Repeated login failures for user admin on tty1
+<p>
+(Since the rule was the first one in the configuration file, its ID is 0. 
+The ID for the second rule would be 1, for the third rule 2, etc.)
+<p>
+When SEC observes input line "user USERNAME login failure on TERM", it
+will first calculate the key and check if there already is an event
+correlation operation with that key. If such operation exists, detected line
+will be correlated by this operation. Otherwise, a new event
+correlation operation will be started which will consume the input line.
+<p>
+This processing scheme means that by using appropriate <i>desc</i> fields,
+you can change the scope of event correlation.
+For instance, if you use 'Repeated login failures for user $1' for 
+<i>desc</i>, you will count login failures for different users,
+disregarding terminal names. Therefore, the following three lines will be
+correlated by the same event correlation operation:
+<p>
+user admin login failure on tty1 <br>
+user admin login failure on tty5 <br>
+user admin login failure on tty2 <br>
+<p>
+However, if you use 'Repeated login failures for user $1 on $2' for 
+<i>desc</i>, the three lines above will each start a separate event
+correlation operation.
+<p>
+Since the configuration file name and rule ID are present in the keys, event
+correlation operations started by different rules will not clash, even if
+their operation description strings are identical.
+
+<p>
+
+<a name="11">
+<b> Q11: How can I see what event correlation operations
+are currently active? How can I see the state of individual event
+correlation operations? How can I see what SEC is currently doing? </b>
+<p>
+
+A: Send SIGUSR1 signal to the SEC process, this will cause SEC to dump
+detailed information about its state to the dumpfile (given with --dump 
+option). The information includes details about event correlation operations 
+and contexts that are currently active, SEC performance and rule usage 
+statistics, etc.
+
+<p>
+
+<a name="12">
+<b>Q12: How does 'reset' action work? </b>
+<p>
+
+A: Suppose you have two rules in your configuration file my.conf:
+<p>
+type=Single <br>
+ptype=RegExp <br>
+pattern=user (\S+) logged in on (\S+) <br>
+desc=User $1 successful login <br>
+action=reset +1 Repeated login failures for user $1 on $2 <br>
+<p>
+type=SingleWithThreshold <br>
+ptype=RegExp <br>
+pattern=user (\S+) login failure on (\S+) <br>
+desc=Repeated login failures for user $1 on $2 <br> 
+action=shellcmd notify.sh "%s" <br>
+window=60 <br>
+thresh=3 <br>
+<p>
+Suppose SEC will observe the following lines:
+<p>
+user admin login failure on tty1 <br>
+user admin login failure on tty5 <br>
+user admin login failure on tty2 <br>
+<p>
+The second rule will start a separate event correlation operation for each
+of the lines. The keys of these operations are:
+<p>
+my.conf | 1 | Repeated login failures for user admin on tty1 <br>
+my.conf | 1 | Repeated login failures for user admin on tty5 <br>
+my.conf | 1 | Repeated login failures for user admin on tty2 <br>
+<p>
+(since the rule was the second one in the configuration file, its ID is 1).
+<p>
+When SEC will observe the line 'user admin logged in on tty5', it will
+evaluate $1 and $2 variables, yielding the following action:
+<p>
+reset +1 Repeated login failures for user admin on tty5
+<p>
+This means that SEC has to terminate the operation which has been started 
+by the next rule (+1) and which has the key 
+<p>
+my.conf | 1 | Repeated login failures for user admin on tty5
+<p>
+Since the terms "next to the first" and "second" are identical, 
+another way to write the same action is:
+<p>
+action=reset 2 Repeated login failures for user $1 on $2
+<p>
+If there is no rule number specified in the action definition, e.g.
+<p>
+action=reset Repeated login failures for user $1 on $2
+<p>
+then SEC will assume a wildcard for the rule number, constructing all 
+possible keys and trying to find and terminate corresponding operations.
+If there are 5 rules in the configuration file, SEC would look for the
+operations with the following keys:
+<p>
+my.conf | 0 | Repeated login failures for user admin on tty5 <br>
+my.conf | 1 | Repeated login failures for user admin on tty5 <br>
+my.conf | 2 | Repeated login failures for user admin on tty5 <br>
+my.conf | 3 | Repeated login failures for user admin on tty5 <br>
+my.conf | 4 | Repeated login failures for user admin on tty5 <br>
+
+<p>
+
+<a name="13">
+<b>Q13: How can I use regular expression modifiers in SEC rule definitions 
+(like //i, //m, etc.)? </b>
+<p>
+
+A: SEC regular expression definitions don't include surrounding slashes, and
+therefore it looks like there is no place for modifiers. Fortunately, perl
+regular expressions allow you to use modifiers inside regular expressions:
+<p>
+/your_regexp/i can be expressed as /(?i)your_regexp/ <br>
+/your_regexp/m can be expressed as /(?m)your_regexp/ <br>
+etc. <br> 
+(see perlre(1) man page)<br>
+<p>
+For example, if you would like to set 'pattern' field to /[A-Z]/i, 
+correct way of doing that would be 'pattern=(?i)[A-Z]'.
+
+<p>
+
+<a name="14">
+<b>Q14: How can I load Perl modules that could be used at SEC runtime?</b>
+<p>
+A: Add --intevents option to SEC commandline, and write a rule for loading 
+the necessary module when SEC_STARTUP event is observed. The following
+rule will load the SNMP module, and terminate SEC if the loading failed:
+<p>
+type=single <br>
+ptype=substr <br>
+pattern=SEC_STARTUP <br>
+context=SEC_INTERNAL_EVENT <br>
+desc=Load SNMP module <br>
+action=assign %a 0; eval %a (require SNMP); eval %a (exit(1) unless %a) <br>
+<p>
+Note that before attempting to load the SNMP module, the %a variable will be 
+set to zero, since if the SEC 'eval' action fails, it will not change the 
+previous value of its variable. Therefore, if %a is still zero after the load 
+attempt, the attempt was not successful.
+
+<p>
+
+<a name="15">
+<b>Q15: How can I save contexts to disk when SEC is shut down, 
+and read them in after SEC has been restarted? </b>
+<p>
+A: Add --intevents option to SEC commandline, and write rules for saving
+context names when SEC_SHUTDOWN event is observed and for reading context
+names in when SEC_STARTUP event is observed. For writing context names into
+a file, use SingleWithScript rule:
+<p>
+# save context names 
+<p>
+type=SingleWithScript <br>
+ptype=SubStr <br>
+pattern=SEC_SHUTDOWN <br>
+context=SEC_INTERNAL_EVENT <br>
+script=cat > /tmp/sec_contexts.dump <br>
+desc=Saving the SEC contexts <br>
+action=none <br>
+<p>
+# read in context names, prepending 'SEC_CONTEXT: ' prefix to every name
+<p>
+type=Single <br>
+ptype=SubStr <br>
+pattern=SEC_STARTUP <br>
+context=SEC_INTERNAL_EVENT <br>
+desc=Read in previously saved SEC contexts <br>
+action=spawn perl -ne 'print "SEC_CONTEXT: $_"' /tmp/sec_contexts.dump <br>
+<p>
+# Create contexts, based on the information received from the previous rule
+<p>
+type=Single <br>
+ptype=RegExp <br>
+pattern=^SEC_CONTEXT: (.*) <br>
+desc=Recreate context $1 <br>
+action=create $1 <br>
+<p>
+The following ruleset loads Perl Storable module at SEC startup and uses 
+it for saving/restoring all context data (context names, their lifetimes
+event stores, etc.):
+<p>
+type=Single <br>
+ptype=SubStr <br>
+pattern=SEC_STARTUP <br>
+context=SEC_INTERNAL_EVENT <br>
+continue=TakeNext <br>
+desc=Load the Storable module and terminate if it is not found <br>
+action=assign %ret 0; eval %ret (require Storable); \ <br>
+&nbsp;&nbsp;  eval %ret (exit(1) unless %ret) <br>
+<p>
+type=Single <br>
+ptype=SubStr <br>
+pattern=SEC_STARTUP <br>
+context=SEC_INTERNAL_EVENT <br>
+desc=Restore all SEC contexts from /tmp/SEC_CONTEXTS on startup <br>
+action=lcall %ret -> ( sub { %main::context_list = \ <br>
+&nbsp;&nbsp;  %{Storable::retrieve("/tmp/SEC_CONTEXTS")}; } ) <br>
+<p>
+type=Single <br>
+ptype=SubStr <br>
+pattern=SEC_SHUTDOWN <br>
+context=SEC_INTERNAL_EVENT <br>
+desc=Save all SEC contexts into /tmp/SEC_CONTEXTS on shutdown <br>
+action=lcall %ret -> ( sub { \ <br>
+&nbsp;&nbsp;  Storable::store(\%main::context_list, "/tmp/SEC_CONTEXTS"); } ) <br>
+
+<p>
+
+<a name="16">
+<b>Q16: How can I set up bi-directional communication between SEC and 
+its subprocess that was started by 'spawn' action?</b>
+<p>
+A: When another process is started with 'spawn' from SEC,
+it can send data to SEC by writing to standard output (internally, the
+standard output of the process is redirected to a pipe that SEC reads).
+To send data from SEC to the spawned process, set up a named pipe or file 
+from the process and use the 'write' action for writing to that pipe or file.
+
+<p>
+
+<a name="17">
+<b>Q17: How can I run 'shellcmd' actions in an ordered manner (i.e., 
+an action is not started before the previous one has completed)?</b>
+<p>
+A: Suppose you have the following rule definition:
+<p>
+type=Calendar <br>
+time=0 0 * * * <br>
+desc=Sending report <br>
+action=shellcmd cat /tmp/myreport | mail root@localhost; \ <br>
+&nbsp;&nbsp;&nbsp;&nbsp;  shellcmd rm -f /tmp/myreport <br>
+<p>
+Since the runtime of external programs started with the 'shellcmd' actions 
+is not limited in any way, SEC creates a separate process for executing
+each program, in order to avoid freezing the whole event processing. 
+Therefore, although the first action
+(cat /tmp/myreport | mail root@localhost) is started before the second one
+(rm -f /tmp/myreport), it is not guaranteed that the first action has already 
+terminated when the second action starts. Furthermore, since commandlines 
+are first processed by the shell, it could well happen that the second action 
+is actually executed first, especially if its commandline is much simpler and
+takes less time to process.
+Therefore, the rule definition above might easily produce an empty e-mail 
+message, since the file is removed just before 'cat' gets to it.
+<p>
+In order to avoid such unwanted behaviour, you could use single 'shellcmd' 
+action and take advantage of the shell's && control operator:
+<p>
+type=Calendar <br>
+time=0 0 * * * <br>
+desc=Sending report <br>
+action=shellcmd cat /tmp/myreport | mail root@localhost && rm -f /tmp/myreport <br>
+<p>
+i.e., the file /tmp/myreport is not removed before the 'mail' command has 
+completed successfully. Another way to solve this problem is to put all
+your commands into a separate shell script, and give the name of the script
+to the 'shellcmd' action.
+
+<p>
+
+<a name="18">
+<b>Q18: I have started a long-running subprocess from SEC, but when I 
+send SIGHUP or SIGTERM to SEC, the subprocess will not receive SIGTERM as it 
+should. What can be done about it?</b>
+<p>
+A: When a command is started from Perl with system() or open() call, 
+Perl checks whether the command contains shell metacharacters, and if
+it does, the command is executed with the interpreting shell 
+(on UNIX platforms, normally with <i>/bin/sh -c your_command</i>).
+This means that when SEC is sending SIGTERM to its child processes, 
+<i>your_command</i> will NOT receive SIGTERM, but it will be sent to the shell
+that started it.
+<p>
+In order to avoid such unwanted behaviour (and save one slot
+in your process table), use shell's <i>exec</i> builtin command. 
+When <i>exec</i> is prependend to your commandline, the shell will not
+fork a separate process for your command, but it will be executed
+inside the current process. E.g., when you specify
+<p>
+action=spawn exec /usr/local/bin/myscript.pl 2>/var/log/myscript.log
+<p>
+an extra process will not be created for myscript.pl, although the
+commandline contains the shell redirection metacharacter '>'.
+
+<p>
+
+<a name="19">
+<b>Q19: How can I write a rule for several input sources 
+that would be able to report the name of the source for matching lines?</b>
+<p>
+A: Starting from SEC-2.6.1, you can take advantage of the $+{_inputsrc}
+match variable that holds the name(s) of input source(s) for matching line(s).
+With earlier versions of SEC,
+use the PerlFunc pattern type that has the input source name as one of its 
+input parameters, and return the input source name from the pattern function.
+E.g., the following rule matches the "File system full" messages with
+a regular expression, and sets $1 and $2 variables to the file system and input
+source names:
+<p>
+type=single <br>
+ptype=perlfunc <br>
+pattern=sub { if ($_[0] =~ /(\S+): [Ff]ile system full/) { \ <br>
+&nbsp;&nbsp;&nbsp;&nbsp;  return ($1, $_[1]); } else { return 0; } } <br>
+desc=File system $1 full ($2) <br>
+action=write - <br>
+<p>
+If the "/opt: file system full" message is logged to /var/log/server1.log,
+the rule writes "File system /opt full (/var/log/server1.log)" to standard
+output.
+
+<p>
+
+<a name="20">
+<b>Q20: How can I limit the run time of child processes?</b>
+<p>
+A: First, you can schedule the delivery of the ALRM signal for the child 
+process with the alarm(2) system call. For example, the following 'shellcmd' 
+action starts /bin/myprog which will get the ALRM signal after 10 seconds 
+and terminate (provided that no custom handler has been set for ALRM in
+/bin/myprog):
+<p>
+action=shellcmd ( perl -e 'alarm(10); exec("/bin/myprog")' )
+<p>
+If you would like to be able to use other signals for terminating child
+processes, you could use the following fairly simple Perl wrapper script:
+<p>
+<i>
+#!/usr/bin/perl -w
+<p>
+if (scalar(@ARGV) < 3) { exit(1); }
+<br>
+$int = shift @ARGV;
+<br>
+$sig = shift @ARGV;
+<p>
+$pid = fork(); 
+<p>
+if ($pid == -1) { 
+<br>
+&nbsp;&nbsp;  exit(1);  
+<br>
+} elsif ($pid == 0) { 
+<br>
+&nbsp;&nbsp;  exec("@ARGV");  
+<br>
+} else { 
+<br>
+&nbsp;&nbsp;  $SIG{ALRM} = sub { kill $sig, $pid; exit(0); }; 
+<br>
+&nbsp;&nbsp;  $SIG{TERM} = sub { kill TERM, $pid; exit(0); }; 
+<br>
+&nbsp;&nbsp;  alarm($int); 
+<br>
+&nbsp;&nbsp;  waitpid($pid, 0); 
+<br>
+&nbsp;&nbsp;  exit($? >> 8); 
+<br>
+}  
+</i>
+<p>
+The following 'shellcmd' action will invoke /bin/prog through this wrapper
+and terminate it after 15 seconds with the KILL signal:
+<p>
+action=shellcmd /usr/local/bin/wrapper.pl 15 9 /bin/myprog
+
+<p>
+
+</html>

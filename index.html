@@ -1,0 +1,174 @@
+<html>
+
+<head>
+
+<title>
+SEC - open source and platform independent event correlation tool
+</title>
+
+<META NAME="DESCRIPTION"
+CONTENT="SEC - open source and platform independent event correlation tool">
+
+<META NAME="KEYWORDS" CONTENT="sec, simple event correlator, 
+simple event correlation tool, platform independent event correlation tool,
+open source event correlation tool, event processing, event analysis,
+log correlation, log management, log monitoring, log analysis,
+security management, security monitoring, network management,
+network monitoring, fraud detection">
+
+</head>
+
+<body>
+
+<h1>SEC - simple event correlator</h1>
+
+<h3>Introduction</h3>
+SEC is an event correlation tool for advanced event processing which can be 
+harnessed for event log monitoring, for network and security management, for 
+fraud detection, and for any other task which involves event correlation.
+Event correlation is a procedure where a stream of events is processed, 
+in order to detect (and act on) certain event groups that occur within 
+predefined time windows. Unlike many other event correlation products which 
+are heavyweight solutions, SEC is a lightweight and platform-independent 
+event correlator which runs as a single process. The user can start it as a
+daemon, employ it in shell pipelines, execute it interactively in a terminal, 
+run many SEC processes simultaneously for different tasks, and use it in a 
+wide variety of other ways.
+<p>
+SEC reads lines from files, named pipes, or standard input, 
+matches the lines with patterns (like regular expressions or Perl subroutines) 
+for recognizing input events, and correlates events according to the rules in 
+its configuration file(s). SEC can produce output by executing external 
+programs (e.g., <i>snmptrap</i> or <i>mail</i>), by writing to files, 
+by sending data to TCP and UDP based servers, by calling precompiled Perl
+subroutines, etc.
+
+<h3>Documentation</h3>
+See <a href="man.html">SEC manpage</a> for official documentation.
+Also, the <a href="FAQ.html">FAQ</a> provides answers to some frequently
+asked questions.
+<p>
+For additional information, you can check the following sources:
+<ul>
+<li>
+<a href="http://ristov.github.io/publications/cogsima15-sec-web.pdf">
+"Simple Event Correlator - Best Practices for Creating Scalable 
+Configurations"</a> - a paper presented at IEEE CogSIMA 2015 which describes
+some techniques for creating scalable configurations.</li>
+<li>
+<a href="https://www.usenix.org/system/files/login/articles/09_lang-online.pdf">
+"Using SEC"</a> by David Lang -
+a paper from USENIX ;login: Magazine December 2013 issue.</li>
+<li>
+<a href="http://ristov.github.io/publications/sec-issa2012.pdf">
+"Security Event Processing with Simple Event Correlator"</a> -
+a paper from ISSA Journal August 2012 issue which focuses on some security
+event processing scenarios.</li>
+<li>
+<a href="http://ristov.github.io/publications/sec-hakin9-2006.pdf">
+"Simple Event Correlator for real-time security log monitoring"</a> -
+a paper from Hakin9 Magazine 1/2006 (6).</li>
+<li>
+<a href="http://www.cs.umb.edu/~rouilj/sec/">
+"Real-time log file analysis using the Simple Event Correlator (SEC)"</a> 
+by John P. Rouillard - a paper with SEC ruleset examples that was presented 
+at USENIX LISA 2004.</li>
+<li>
+<a href="http://ristov.github.io/publications/sec-ipom02-web.pdf">
+"SEC - a Lightweight Event Correlation Tool"</a> - an early paper about SEC
+that was presented at IEEE IPOM 2002.</li>
+<li>
+<a href="rulesets/">SEC rule repository</a> - if you have developed 
+a ruleset that might be interesting to others as well, please contribute.</li>
+</ul>
+
+<h3>Installation information and dependencies</h3>
+SEC has been primarily tested on Linux and Solaris, but since it is written
+in Perl and does not use any platform-dependent code, it should work on any
+modern UNIX platform. SEC is also known to work on Windows, although some
+of the functionality that is native to UNIX will be disabled.
+<p>
+In order to install SEC, check where your Perl executable is located
+and change the first line in the <i>sec</i> file accordingly.
+For example, if your Perl executable is <i>/usr/local/bin/perl</i>, 
+set the first line to <i>#!/usr/local/bin/perl -w</i>.
+Then copy <i>sec</i> and <i>sec.man</i> (SEC manpage)
+to appropriate directories, e.g., <br>
+<i>cp sec /usr/local/bin</i> <br>
+<i>cp sec.man /usr/local/man/man1/sec.1</i>
+<p>
+Since SEC is not tested against ancient Perl releases, 
+it is recommended to run SEC with at least Perl 5.8 (see 
+<a href="http://www.perl.org">http://www.perl.org</a> for the latest stable 
+Perl release). 
+Apart from Perl, SEC does not depend on other software. 
+It uses Perl <i>Getopt</i>, <i>POSIX</i>, <i>Fcntl</i>, <i>Socket</i>,
+<i>IO::Handle</i>, and <i>Sys::Syslog</i> modules
+which are included in the standard installation of Perl (the presence of
+<i>Sys::Syslog</i> is optional).
+<p>
+
+<a name="mailinglist">
+<h3>Mailing list</h3>
+There is a 
+<a href="https://lists.sourceforge.net/lists/listinfo/simple-evcorr-users/">
+mailing list for SEC users</a>. 
+The purpose of this list is to facilitate discussion between SEC users, 
+so that you can ask questions from more experienced users and share your 
+experience with others.
+Before posting a question, please
+<a href="http://sourceforge.net/p/simple-evcorr/mailman/search/?mail_list=simple-evcorr-users">
+search</a> 
+the list - there are some questions that get asked quite frequently and
+you might find several answers in the mailing list archive. 
+
+<a name="download">
+<h3>Download</h3>
+<a href="http://sourceforge.net/projects/simple-evcorr/files/sec/2.7.7/sec-2.7.7.tar.gz/download">
+sec-2.7.7.tar.gz</a> <i>(February 10 2015)</i>
+<p>
+... or you can visit
+<a href="http://sourceforge.net/projects/simple-evcorr/files/">
+SEC download page at Sourceforge</a> (has also older versions available).
+<p>
+SEC has also been packaged for a number of Linux and BSD distributions.
+You can try the following links for finding a package for your platform: <br> 
+- <a href="http://koji.fedoraproject.org/koji/packageinfo?packageID=3817">
+Fedora and RHEL packages at Koji</a> <br>
+- <a href="http://rpmfind.net/linux/rpm2html/search.php?query=sec">
+RPM package search at rpmfind.net</a> <br>
+- <a href="http://packages.debian.org/stable/utils/sec">Debian package info</a> <br>
+- <a href="http://packages.ubuntu.com/search?searchon=names&exact=1&keywords=sec">
+Ubuntu package info</a> <br>
+- <a href="https://build.opensuse.org/package/show?package=sec&project=server%3Amonitoring">
+SLE and openSUSE package info</a> <br>
+- <a href="http://packages.gentoo.org/package/net-analyzer/sec">
+Gentoo package info</a> <br>
+- <a href="http://openports.se/sysutils/sec">OpenBSD package info</a> <br>
+- <a href="http://www.freshports.org/sysutils/sec">FreeBSD package info</a> <br>
+(if any of the links are broken, please contact the author).
+
+<h3>Author</h3>
+<address>
+<a href="http://ristov.github.io">Risto Vaarandi</a>
+(rvaarandi at Y4H00 d0t C0M)
+</address>
+<p>
+Please don't contact the author with SEC usage questions - you should post 
+such questions to the SEC mailing list.
+
+<h3>Acknowledgments</h3>
+This work is supported by <b><a href="http://www.seb.ee">SEB</a></b>.
+<p>
+The author thanks the following people for supplying software patches,
+documentation fixes, and suggesting new features:
+Al Sorrell, Brian Mielke, David Lang, James Brown, Jon Frazier, Mark D. Nagel, 
+Peter Eckel, Rick Casey, and William Gertz.
+<p>
+Last but not least, the author expresses his profound gratitute to
+John P. Rouillard for many great ideas and creative discussions that have
+helped to develop SEC.
+
+</body>
+
+</html>
