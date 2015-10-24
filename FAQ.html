@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: November 9, 2013<p>
+Updated: October 24, 2015<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -760,8 +760,11 @@ ptype=SubStr <br>
 pattern=SEC_STARTUP <br>
 context=SEC_INTERNAL_EVENT <br>
 desc=Restore all SEC contexts from /tmp/SEC_CONTEXTS on startup <br>
-action=lcall %ret -> ( sub { %main::context_list = \ <br>
-&nbsp;&nbsp;  %{Storable::retrieve("/tmp/SEC_CONTEXTS")}; } ) <br>
+action=lcall %ret -> ( sub { \ <br>
+&nbsp;&nbsp;  my $ptr = $main::context_list{"SEC_INTERNAL_EVENT"}; \ <br>
+&nbsp;&nbsp;  %main::context_list = \ <br>
+&nbsp;&nbsp;  %{Storable::retrieve("/tmp/SEC_CONTEXTS")}; \ <br>
+&nbsp;&nbsp;  $main::context_list{"SEC_INTERNAL_EVENT"} = $ptr; } ) <br>
 <p>
 type=Single <br>
 ptype=SubStr <br>
