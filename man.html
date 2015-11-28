@@ -1,8 +1,8 @@
-<HTML><HEAD><TITLE>Manpage of sec</TITLE>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: February 2015<BR>
-
+Section: User Commands  (1)<BR>Updated: November 2015<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -48,7 +48,6 @@ Section: User Commands  (1)<BR>Updated: February 2015<BR>
 <DT><A HREF="#lbBJ">ACKNOWLEDGMENTS</A><DD>
 <DT><A HREF="#lbBK">SEE ALSO</A><DD>
 </DL>
-
 <HR>
 
 <A NAME="lbAB">&nbsp;</A>
@@ -111,6 +110,9 @@ sec - simple event correlator
 <BR>
 
 [--dump=&lt;dumpfile&gt;]
+<BR>
+
+[--dumpfts | --nodumpfts]
 <BR>
 
 [--quoting | --noquoting]
@@ -176,10 +178,10 @@ the configuration file.
 If there are two or more configuration files, rule sequence from every file
 is matched against input (unless explicitly specified otherwise).
 SEC can produce output by executing external programs (e.g., 
-<B><A HREF="/man/man2html?1+snmptrap">snmptrap</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+snmptrap">snmptrap</A></B>(1)
 
 or
-<B><A HREF="/man/man2html?1+mail">mail</A></B>(1)),
+<B><A HREF="/cgi-bin/man/man2html?1+mail">mail</A></B>(1)),
 
 by writing to files, by sending data to TCP and UDP based servers, 
 by calling precompiled Perl subroutines, etc. 
@@ -257,7 +259,7 @@ pattern of the above rule, and the match variable $1 will be set to the string
 <I>risto </I>
 
 (see
-<B><A HREF="/man/man2html?1+perlre">perlre</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+perlre">perlre</A></B>(1)
 
 for details).
 After a match, SEC will evaluate the operation description string given with 
@@ -274,7 +276,7 @@ a new operation for the user name risto, and the occurrence time of the input
 event will be recorded into the operation. 
 Note that for event occurrence time SEC always uses the current time 
 as returned by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call, *not* the timestamp extracted from the event. 
 Suppose that after 25 seconds, 
@@ -639,7 +641,7 @@ facility &lt;facility&gt;, e.g.,
 <I>local0</I>
 
 (see 
-<B><A HREF="/man/man2html?3+syslog">syslog</A></B>(3)
+<B><A HREF="/cgi-bin/man/man2html?3+syslog">syslog</A></B>(3)
 
 for possible facility values). Warning: be careful with using this option if 
 SEC is employed for monitoring syslog logfiles, because message loops might
@@ -685,8 +687,18 @@ SEC will store its process ID to &lt;pidfile&gt; at startup.
 <DT><B>--dump=&lt;dumpfile&gt;</B>
 
 <DD>
-SEC will use &lt;dumpfile&gt; as its dumpfile. See SIGNALS section for more 
-information. Default is /tmp/sec.dump.
+SEC will use &lt;dumpfile&gt; as its dump file for writing performance and debug
+data. See SIGNALS section for more information. Default is /tmp/sec.dump.
+<DT><B>--dumpfts</B>, <B>--nodumpfts</B>
+
+<DD>
+if the
+<B>--dumpfts</B>
+
+option is specified, a timestamp suffix (seconds since Epoch) is appended
+to the dump file name when the file is created. Default is
+<B>--nodumpfts</B>.
+
 <DT><B>--quoting</B>, <B>--noquoting</B>
 
 <DD>
@@ -702,7 +714,7 @@ command lines of
 and
 <I>cspawn</I>
 
-actions will be put inside apostrophes. All apostrophes ' that strings 
+actions will be put inside single quotes. Each single quote (') that strings 
 originally contain will be masked. This option prevents the shell from 
 interpreting special symbols that operation description strings might contain. 
 Default is
@@ -824,7 +836,7 @@ The
 
 option forces SEC to close and (re)open all input files during soft restarts.
 Default is
-<B>--nokeepopen</B>.
+<B>--keepopen</B>.
 
 <DT><B>--rwfifo</B>, <B>--norwfifo</B>
 
@@ -1281,7 +1293,7 @@ variables.
 
 <DD>
 pattern is a Perl regular expression (see 
-<B><A HREF="/man/man2html?1+perlre">perlre</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+perlre">perlre</A></B>(1)
 
 for more information) for matching the last N input lines 
 L1, L2, ..., LN. If N is greater than 1, the input lines are joined into 
@@ -2161,7 +2173,19 @@ rule fields. An action list consists of action definitions that are separated
 by semicolons. 
 Each action definition begins with a keyword specifying the action type. 
 Depending on the action type, parameters may follow, and non-constant
-parameters may contain match variables.
+parameters may contain match variables. For instance, if the $1 and $2 match
+variables have the values &quot;test1&quot; and &quot;the second test&quot;, respectively, 
+the action
+<I>create MYCONT_$1 60</I>
+
+creates the context 
+<B>MYCONT_test1 </B>
+
+with the lifetime of 60 seconds, while the action
+<I>write - The names of tests: $1, $2</I>
+
+writes the string &quot;The names of tests: test1, the second test&quot; 
+to standard output.
 In order to use semicolons inside a non-constant parameter, 
 the parameter must be enclosed in parentheses (the outermost set of
 parentheses will be removed by SEC during configuration file parsing).
@@ -2228,18 +2252,42 @@ field of the rule.
 <P>
 
 %t - current time in human-readable format (as returned by the
-<B><A HREF="/man/man2html?1+date">date</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+date">date</A></B>(1)
 
 utility).
 <P>
 
 %u - current time in seconds since Epoch (as returned by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call).
 <P>
 
-Note that in order to disambiguate the variable from the following text,
+For example, the following action list assigns the current time in 
+human readable format and the content of the $0 match variable to 
+the %text action list variable, and mails the value of %text to
+<A HREF="mailto:root@localhost">root@localhost</A>:
+<P>
+
+action=assign %text %t: $0; pipe '%text' /bin/mail <A HREF="mailto:root@localhost">root@localhost</A>
+<P>
+
+If the action list is executed at Nov 19 10:58:51 2015 and the $0
+match variable has the value &quot;This is a test event&quot;, the
+<I>assign</I>
+
+action sets the %text action list variable to the string
+&quot;Thu Nov 19 10:58:51 2015: This is a test event&quot;, while the
+<I>pipe</I>
+
+action mails this string to <A HREF="mailto:root@localhost">root@localhost</A>.
+Note that unlike match variables, action list variables have a global scope,
+and accessing the value of the %text variable in action lists of other rules 
+will thus yield the string &quot;Thu Nov 19 10:58:51 2015: This is a test event&quot; 
+(until another value is assigned to %text).
+<P>
+
+In order to disambiguate the variable from the following text,
 the variable name must be enclosed in braces (e.g., %{s}). Also, when action 
 list variables are substituted with their values, each sequence &quot;%%&quot; is 
 interpreted as a literal percent sign (%) which allows for masking the 
@@ -2327,7 +2375,13 @@ Similar to the
 <I>write</I>
 
 action, except that the string &lt;string&gt; is written without a terminating 
-newline.
+newline. Note that
+<I>write</I>
+
+and
+<I>writen</I>
+
+actions share the same filehandle for accessing the file.
 <DT><I>closef &lt;filename&gt;</I>
 
 <DD>
@@ -2449,8 +2503,8 @@ Fork a process for executing command line &lt;cmdline&gt;. If the
 <B>--quoting</B>
 
 option was specified and &lt;cmdline&gt; contains %s variables, the value of %s
-is quoted with apostrophes before substituting it into &lt;cmdline&gt;;
-note if the value of %s contains apostrophes, they are masked with backslashes
+is quoted with single quotes before substituting it into &lt;cmdline&gt;; 
+if the value of %s contains single quotes, they are masked with backslashes
 (e.g., abc is converted to 'abc' and aa'bb is converted to 'aa'\''bb').
 For additional information, see INTERPROCESS COMMUNICATION section.
 <DT><I>spawn &lt;cmdline&gt;</I>
@@ -2486,7 +2540,7 @@ synthetic event.
 <DD>
 Fork a process for executing command line &lt;cmdline&gt;. The string &lt;string&gt; 
 with a terminating newline is written to the standard input of &lt;cmdline&gt; 
-(apostrophes are used for disambiguating &lt;string&gt; from &lt;cmdline&gt;).
+(single quotes are used for disambiguating &lt;string&gt; from &lt;cmdline&gt;).
 If &lt;string&gt; contains semicolons, &lt;string&gt; must be enclosed in parentheses
 (e.g.,
 <I>pipe '($1;$2)' /bin/cat</I>).
@@ -2678,7 +2732,7 @@ If the context &lt;name&gt; does not exist, the value of %&lt;var&gt; does not c
 <DD>
 Set the creation time of context &lt;name&gt; to &lt;time&gt;. 
 The &lt;time&gt; parameter must evaluate to seconds since Epoch (as reported by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call), and must reflect a time moment between the previous creation
 time and the current time (both endpoints included).
@@ -2744,7 +2798,7 @@ Find the beginning of the event correlation window for an event correlation
 operation, and set the action list variable %&lt;var&gt; to this timestamp. 
 The value assigned to %&lt;var&gt; is measured in seconds since Epoch 
 (as reported by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call). As with the
 <I>reset</I>
@@ -2760,7 +2814,7 @@ For additional information, see EVENT CORRELATION OPERATIONS section.
 Set the beginning of the event correlation window to &lt;time&gt; for an event
 correlation operation (if it exists). The &lt;time&gt; parameter must evaluate to 
 seconds since Epoch (as reported by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call), and must reflect a time moment between the previous window
 position and the current time (both endpoints included). As with the
@@ -2774,6 +2828,23 @@ For additional information, see EVENT CORRELATION OPERATIONS section.
 
 <DD>
 Assign string &lt;string&gt; to the action list variable %&lt;var&gt;. 
+Default value for &lt;string&gt; is %s.
+<DT><I>assignsq %&lt;var&gt; [&lt;string&gt;]</I>
+
+<DD>
+Similar to the
+<I>assign</I>
+
+action, except that &lt;string&gt; is quoted with single quotes before assigning
+it to %&lt;var&gt;. If &lt;string&gt; contains single quotes, they are masked with
+backslashes (e.g., if the match variable $1 holds the value 
+abc'123'xyz, the action
+<I>assignsq %myvar $1</I>
+
+assigns the value 'abc'\''123'\''xyz' to the action list variable %myvar).
+This action is useful for disabling shell intepretation 
+for the values of action list variables that appear in command lines executed 
+by SEC.
 Default value for &lt;string&gt; is %s.
 <DT><I>free %&lt;var&gt;</I>
 
@@ -4161,7 +4232,7 @@ string given with the
 field. If the operation for the given string and rule does not exist, 
 SEC will create it with the lifetime of T seconds. The operation will 
 memorize the occurrence time of the event (current time as returned by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call), and compare the number of memorized occurrence times with 
 the threshold N. If the operation has observed N events, it executes the
@@ -4350,7 +4421,7 @@ string given with the
 field. If the operation for the given string and rule does not exist, 
 SEC will create it with the lifetime of T1 seconds. The operation will 
 memorize the occurrence time of the event (current time as returned by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call), and compare the number of memorized occurrence times with 
 the threshold N1. If the operation has observed N1 events, it executes the
@@ -4573,7 +4644,7 @@ string given with the
 field. If the operation for the given string and rule does not exist, 
 SEC will create it with the lifetime of T seconds. The operation will 
 memorize the occurrence time of the event (current time as returned by the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call), and compare the number of memorized occurrence times for each
 eK with the threshold cK. 
@@ -5200,7 +5271,7 @@ field. The action list is executed only once for any matching minute.
 <P>
 
 The rule employs a time specification which closely resembles the
-<B><A HREF="/man/man2html?1+crontab">crontab</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+crontab">crontab</A></B>(1)
 
 style, but there are some subtle differences.
 The time specification consists of five or six conditions separated
@@ -5219,18 +5290,18 @@ with step values (e.g., 47-55/2 means 47,49,51,53,55).
 <P>
 
 Note that unlike
-<B><A HREF="/man/man2html?1+crontab">crontab</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+crontab">crontab</A></B>(1)
 
 time specification, the day and weekday conditions are *not* joined with 
 logical OR, but rather with logical AND.
 Therefore, 0 1 25-31 10 7 means 1AM on last Sunday in October. 
 On the other hand, with
-<B><A HREF="/man/man2html?1+crontab">crontab</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+crontab">crontab</A></B>(1)
 
 the same specification means 1AM in every last seven days or every Sunday
 in October.
 Also, unlike some versions of
-<B><A HREF="/man/man2html?8+cron">cron</A></B>(8),
+<B><A HREF="/cgi-bin/man/man2html?8+cron">cron</A></B>(8),
 
 SEC is not restricted to take action only during the first second of
 the current minute (for example, if SEC is started at the 22th second
@@ -5415,10 +5486,14 @@ remarks and comments.
 Note that match variables may be used in the
 <I>context</I>
 
-and
+field. They may also be used in the
 <I>cfset</I>
 
-fields. Also note that this rule does not start event correlation operations,
+field, provided that the 
+<I>constset </I>
+
+field is set to No.
+Also note that this rule does not start event correlation operations,
 and the optional
 <I>desc</I>
 
@@ -6336,7 +6411,7 @@ not be shortened).
 Finally, note that apart from the sleeps after unsuccessful polls, SEC 
 measures all time intervals and occurrence times in seconds, and always uses 
 the
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call for obtaining the current time. Also, for input event occurrence
 time SEC always uses the time it observed the event, *not* the timestamp 
@@ -6391,21 +6466,42 @@ SEC_STARTUP - generated when SEC is started (this event will always be
 the first event that SEC sees)
 <P>
 
-SEC_RESTART - generated after SEC has received the
+SEC_PRE_RESTART - generated before processing of the
 <B>SIGHUP</B>
 
-signal and all internal data structures have been cleared (this event will
-be the first event that SEC sees after reloading its configuration)
+signal (this event will be the last event that SEC sees before clearing 
+all internal data structures and reloading its configuration)
 <P>
 
-SEC_SOFTRESTART - generated after SEC has received the
+SEC_RESTART - generated after processing of the
+<B>SIGHUP</B>
+
+signal (this event will be the first event that SEC sees after clearing 
+all internal data structures and reloading its configuration)
+<P>
+
+SEC_PRE_SOFTRESTART - generated before processing of the
+<B>SIGABRT</B>
+
+signal (this event will be the last event that SEC sees before reloading
+its configuration)
+<P>
+
+SEC_SOFTRESTART - generated after processing of the
 <B>SIGABRT</B>
 
 signal (this event will be the first event that SEC sees after reloading
 its configuration)
 <P>
 
-SEC_LOGROTATE - generated after SEC has received the
+SEC_PRE_LOGROTATE - generated before processing of the
+<B>SIGUSR2</B>
+
+signal (this event will be the last event that SEC sees before reopening 
+its log file and closing its outputs)
+<P>
+
+SEC_LOGROTATE - generated after processing of the
 <B>SIGUSR2</B>
 
 signal (this event will be the first event that SEC sees after reopening 
@@ -6552,7 +6648,7 @@ actions fork a child process for executing an external program.
 If the program command line contains shell metacharacters, the command
 line is first parsed by the shell which then starts the program.
 SEC communicates with its child processes through pipes (created with the 
-<B><A HREF="/man/man2html?2+pipe">pipe</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+pipe">pipe</A></B>(2)
 
 system call). 
 When the child process is at the read end of the pipe, data have to be written
@@ -6588,7 +6684,7 @@ the shell's builtin
 <I>exec</I>
 
 command can be used (see
-<B><A HREF="/man/man2html?1+sh">sh</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+sh">sh</A></B>(1)
 
 for more information) which replaces the shell with the program
 without forking a new process, e.g., 
@@ -6611,16 +6707,16 @@ use the shell &amp;&amp; operator and write
 <P>
 
 Sometimes it is desireable to start an external program and provide it with
-data from several rules. In order to create such setup, names pipes can be used.
-For example, if /var/log/pipe is a named pipe, then
+data from several rules. In order to create such setup, named pipes can be 
+harnessed. For example, if /var/log/pipe is a named pipe, then
 <P>
 
 action=shellcmd /usr/bin/logger -f /var/log/pipe -p user.notice
 <P>
 
-starts the /usr/bin/logger utility which sends all lines read from /var/log/pipe
-to the local syslog daemon with the &quot;user&quot; facility and &quot;notice&quot; level.
-In order to feed events to /usr/bin/logger, the
+starts the /usr/bin/logger utility which sends all lines read from 
+/var/log/pipe to the local syslog daemon with the &quot;user&quot; facility and &quot;notice&quot; 
+level. In order to feed events to /usr/bin/logger, the
 <I>write</I>
 
 action can be used (e.g.,
@@ -6629,15 +6725,15 @@ action can be used (e.g.,
 Although SEC keeps the named pipe open across different
 <I>write</I>
 
-actions, the pipe will be closed on the reception of SIGHUP, SIGABRT and SIGUSR2
-signals. 
-Since a number of command line tools terminate on receiving EOF from input, they 
-need restarting after such signals have arrived. For this purpose, the
+actions, the pipe will be closed on the reception of SIGHUP, SIGABRT and 
+SIGUSR2 signals. 
+Since many UNIX tools terminate on receiving EOF from standard input, 
+they need restarting after such signals have arrived. For this purpose, the
 <B>--intevents</B>
 
-option and SEC internal events can be used. For example, the following rule starts 
-the /usr/bin/logger utility at SEC startup, and also restarts it after the reception 
-of relevant signals:
+option and SEC internal events can be used. For example, the following rule 
+starts the /usr/bin/logger utility at SEC startup, and also restarts it after 
+the reception of relevant signals:
 <P>
 
 type=Single
@@ -6665,8 +6761,9 @@ Note that if /var/log/pipe is never opened for writing by a
 action, /usr/bin/logger will never see EOF and will thus not terminate. The
 <I>owritecl</I>
 
-action opens and closes /var/log/pipe, in order to ensure the presence of EOF
-in such cases.
+action opens and closes /var/log/pipe without writing any bytes, in order 
+to ensure the presence of EOF in such cases. This allows any previous 
+/usr/bin/logger process to terminate before the new process is started.
 <A NAME="lbBB">&nbsp;</A>
 <H2>PERL INTEGRATION</H2>
 
@@ -6852,7 +6949,7 @@ desc=Load the Storable module and terminate if it is not found
 <BR>
 
 action=eval %ret (require Storable); \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;%ret&nbsp;(&nbsp;logonly&nbsp;Storabe&nbsp;loaded&nbsp;)&nbsp;else&nbsp;(&nbsp;eval&nbsp;%o&nbsp;<A HREF="/man/man2html?1+exit">exit</A>(1)&nbsp;)&nbsp;
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;%ret&nbsp;(&nbsp;logonly&nbsp;Storabe&nbsp;loaded&nbsp;)&nbsp;else&nbsp;(&nbsp;eval&nbsp;%o&nbsp;<A HREF="/cgi-bin/man/man2html?1+exit">exit</A>(1)&nbsp;)&nbsp;
 <P>
 
 type=Single
@@ -6867,11 +6964,14 @@ pattern=SEC_STARTUP
 context=SEC_INTERNAL_EVENT
 <BR>
 
-desc=Restore all SEC contexts from /tmp/SEC_CONTEXTS on startup
+desc=Restore all SEC contexts from /var/lib/sec/SEC_CONTEXTS on startup
 <BR>
 
-action=lcall %ret -&gt; ( sub { %main::context_list = \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%{Storable::retrieve(&quot;/tmp/SEC_CONTEXTS&quot;)};&nbsp;}&nbsp;)
+action=lcall %ret -&gt; ( sub { \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;my&nbsp;$ptr&nbsp;=&nbsp;$main::context_list{&quot;SEC_INTERNAL_EVENT&quot;};&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%main::context_list&nbsp;=&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%{Storable::retrieve(&quot;/var/lib/sec/SEC_CONTEXTS&quot;)};&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$main::context_list{&quot;SEC_INTERNAL_EVENT&quot;}&nbsp;=&nbsp;$ptr;&nbsp;}&nbsp;)
 <P>
 
 type=Single
@@ -6886,11 +6986,12 @@ pattern=SEC_SHUTDOWN
 context=SEC_INTERNAL_EVENT
 <BR>
 
-desc=Save all SEC contexts into /tmp/SEC_CONTEXTS on shutdown
+desc=Save all SEC contexts into /var/lib/sec/SEC_CONTEXTS on shutdown
 <BR>
 
 action=lcall %ret -&gt; ( sub { \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Storable::store(\%main::context_list,&nbsp;&quot;/tmp/SEC_CONTEXTS&quot;);&nbsp;}&nbsp;)
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Storable::store(\%main::context_list,&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;/var/lib/sec/SEC_CONTEXTS&quot;);&nbsp;}&nbsp;)
 <P>
 
 However, note that modifying data structures within SEC code is recommended 
@@ -6903,7 +7004,7 @@ into a rule is cumbersome and may decrease its readability. In such cases
 it is recommended to separate the code into a custom Perl module which
 is loaded at SEC startup, and use the code through the module interface
 (see
-<B><A HREF="/man/man2html?1+perlmod">perlmod</A></B>(1)
+<B><A HREF="/cgi-bin/man/man2html?1+perlmod">perlmod</A></B>(1)
 
 for further details):
 <P>
@@ -6924,7 +7025,7 @@ desc=Load the SecStuff module
 <BR>
 
 action=eval %ret (require '/usr/local/sec/SecStuff.pm'); \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;%ret&nbsp;(&nbsp;none&nbsp;)&nbsp;else&nbsp;(&nbsp;eval&nbsp;%o&nbsp;<A HREF="/man/man2html?1+exit">exit</A>(1)&nbsp;)
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;%ret&nbsp;(&nbsp;none&nbsp;)&nbsp;else&nbsp;(&nbsp;eval&nbsp;%o&nbsp;<A HREF="/cgi-bin/man/man2html?1+exit">exit</A>(1)&nbsp;)
 <P>
 
 type=Single
@@ -7296,7 +7397,7 @@ cfset=ssh-login
 type=Jump
 <BR>
 
-context=[ _INTERNAL_EVENT ]
+context=[ SSH_EVENT ]
 <BR>
 
 ptype=TValue
@@ -7305,7 +7406,7 @@ ptype=TValue
 pattern=True
 <BR>
 
-desc=direct synthetic events to relevant ruleset
+desc=direct SSH synthetic events to relevant ruleset
 <BR>
 
 cfset=ssh-events
@@ -7464,7 +7565,7 @@ context=SSH_LOGIN :&gt; ( sub { return $_[0]-&gt;{&quot;status&quot;} eq &quot;F
 desc=User $+{user} failed to log in from $+{srcip} within 60s
 <BR>
 
-action=event %s
+action=cevent SSH_EVENT 0 %s
 <BR>
 
 ptype2=Cached
@@ -7611,7 +7712,7 @@ previously opened input files will remain open across soft restart,
 otherwise all input files will be reopened.
 SEC will (re)load configuration from rule files which have been modified 
 (file modification time returned by
-<B><A HREF="/man/man2html?2+stat">stat</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+stat">stat</A></B>(2)
 
 has changed) or created after the previous configuration load. 
 SEC will also terminate event correlation operations started from rule files
@@ -7630,7 +7731,7 @@ is used in place of
 detailed information about the current state of SEC (performance and 
 rule matching statistics, running event correlation operations, 
 created contexts, etc.) will be written 
-to the SEC dumpfile.
+to the SEC dump file.
 <DT><B>SIGUSR2</B>
 
 <DD>
@@ -7655,7 +7756,7 @@ option, all SEC child processes will receive
 <A NAME="lbBH">&nbsp;</A>
 <H2>BUGS</H2>
 
-With some locale settings, apostrophes (') in this man page might
+With some locale settings, single quotes (') in this man page might
 be displayed incorrectly. As a workaround, set the LANG environment
 variable to C when reading this man page (e.g., env LANG=C man sec).
 <A NAME="lbBI">&nbsp;</A>
@@ -7676,40 +7777,40 @@ helped to develop SEC.
 <A NAME="lbBK">&nbsp;</A>
 <H2>SEE ALSO</H2>
 
-<B><A HREF="/man/man2html?8+cron">cron</A></B>(8),
+<B><A HREF="/cgi-bin/man/man2html?8+cron">cron</A></B>(8),
 
-<B><A HREF="/man/man2html?1+crontab">crontab</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+crontab">crontab</A></B>(1),
 
-<B><A HREF="/man/man2html?1+date">date</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+date">date</A></B>(1),
 
-<B><A HREF="/man/man2html?2+fork">fork</A></B>(2),
+<B><A HREF="/cgi-bin/man/man2html?2+fork">fork</A></B>(2),
 
-<B><A HREF="/man/man2html?1+mail">mail</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+mail">mail</A></B>(1),
 
-<B><A HREF="/man/man2html?1+perl">perl</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+perl">perl</A></B>(1),
 
-<B><A HREF="/man/man2html?1+perlmod">perlmod</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+perlmod">perlmod</A></B>(1),
 
-<B><A HREF="/man/man2html?1+perlre">perlre</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+perlre">perlre</A></B>(1),
 
-<B><A HREF="/man/man2html?2+pipe">pipe</A></B>(2),
+<B><A HREF="/cgi-bin/man/man2html?2+pipe">pipe</A></B>(2),
 
-<B><A HREF="/man/man2html?1+sh">sh</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+sh">sh</A></B>(1),
 
-<B><A HREF="/man/man2html?1+snmptrap">snmptrap</A></B>(1),
+<B><A HREF="/cgi-bin/man/man2html?1+snmptrap">snmptrap</A></B>(1),
 
-<B><A HREF="/man/man2html?2+stat">stat</A></B>(2),
+<B><A HREF="/cgi-bin/man/man2html?2+stat">stat</A></B>(2),
 
-<B><A HREF="/man/man2html?3+syslog">syslog</A></B>(3),
+<B><A HREF="/cgi-bin/man/man2html?3+syslog">syslog</A></B>(3),
 
-<B><A HREF="/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 <P>
 
 <HR>
 This document was created by
-<A HREF="/man/man2html">man2html</A>,
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 10:22:53 GMT, February 10, 2015
+Time: 10:38:03 GMT, November 28, 2015
 </BODY>
 </HTML>
