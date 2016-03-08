@@ -896,10 +896,9 @@ desc=match any event and print the names of its input source and context <br>
 action=lcall %context -> ( sub { keys %{$main::int_context->{"Aliases"}} } ); \ <br>
 &nbsp;&nbsp;&nbsp;&nbsp; write - got input event from file $+{_inputsrc}, context %context <br>
 <p>
-For example, if SEC is started with the command line option 
---input=/var/log/messages=TEST and a line from /var/log/messages is matched by above
-rule, the rule writes "got input event from file /var/log/messages, context TEST"
-to standard output.
+For example, if SEC is started with the command line option --input=/var/log/messages=TEST 
+and a line from /var/log/messages is matched by the above rule, the rule writes 
+"got input event from file /var/log/messages, context TEST" to standard output.
 
 <p>
 
