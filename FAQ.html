@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: October 24, 2015<p>
+Updated: March 8, 2016<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -59,7 +59,8 @@ SEC, but when I send SIGHUP or SIGTERM to SEC, the subprocess will not receive
 SIGTERM as it should. What can be done about it?<br>
 
 <a href="#19">Q19</a>: How can I write a rule for several input sources 
-that would be able to report the name of the source for matching lines? <br>
+that would be able to report the name of the source for matching lines? 
+How to report the name of the internal context for input source? <br>
 
 <a href="#20">Q20</a>: How can I limit the run time of child processes? <br>
 
@@ -856,7 +857,8 @@ commandline contains the shell redirection metacharacter '>'.
 
 <a name="19">
 <b>Q19: How can I write a rule for several input sources 
-that would be able to report the name of the source for matching lines?</b>
+that would be able to report the name of the source for matching lines?
+How to report the name of the internal context for input source? </b>
 <p>
 A: Starting from SEC-2.6.1, you can take advantage of the $+{_inputsrc}
 match variable that holds the name(s) of input source(s) for matching line(s).
@@ -877,6 +879,27 @@ action=write - <br>
 If the "/opt: file system full" message is logged to /var/log/server1.log,
 the rule writes "File system /opt full (/var/log/server1.log)" to standard
 output.
+<p>
+For obtaining the name of the internal context for the current input source,
+you can access the internal context data structure that is referred by
+$int_events variable in the SEC code, and get the keys of the hash table 
+$int_events->{"Aliases"} (the hash table contains only one key which is 
+the name of the internal context for the current input source).
+E.g., the following rule matches all events and if --intcontexts command
+line option is present, it prints to standard output the names of the current
+input source and its internal context:
+<p>
+type=single <br>
+ptype=regexp <br>
+pattern=. <br>
+desc=match any event and print the names of its input source and context <br>
+action=lcall %context -> ( sub { keys %{$main::int_context->{"Aliases"}} } ); \ <br>
+&nbsp;&nbsp;&nbsp;&nbsp; write - got input event from file $+{_inputsrc}, context %context <br>
+<p>
+For example, if SEC is started with the command line option 
+--input=/var/log/messages=TEST and SEC reads a new line from /var/log/messages,
+the above rule writes "got input event from file /var/log/messages, context TEST"
+to standard output.
 
 <p>
 
