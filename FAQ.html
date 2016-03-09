@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: March 8, 2016<p>
+Updated: March 9, 2016<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -880,11 +880,12 @@ If the "/opt: file system full" message is logged to /var/log/server1.log,
 the rule writes "File system /opt full (/var/log/server1.log)" to standard
 output.
 <p>
-For obtaining the name of the internal context for the current input source,
-you can access the internal context data structure that is referred by
-$int_events variable in the SEC code, and get the keys of the hash table 
-$int_events->{"Aliases"} (the hash table contains only one key which is 
-the name of the internal context for the current input source).
+If you are working with SEC-2.7.6 or higher, for obtaining the name of 
+the internal context for the current input source, you can access 
+the internal context data structure that is referred by $int_events 
+variable in the SEC code. When getting the keys of the hash table 
+$int_events->{"Aliases"}, the hash table contains only one key which is 
+the name of the internal context for the current input source.
 E.g., the following rule matches all events and if --intcontexts command
 line option is present, it prints to standard output the names of the current
 input source and its internal context:
