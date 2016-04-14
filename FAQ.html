@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: March 9, 2016<p>
+Updated: April 14, 2016<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -139,6 +139,34 @@ Please note that you have to provide SEC with the --notail option,
 in order to ensure it terminates when rsyslog closes the pipe.
 Otherwise, a redundant SEC instance would stay around after
 rsyslog has been restarted or shut down.
+<p>
+Rsyslog-v8 supports several options which ease the integration of
+SEC with rsyslog. The following example (tested with rsyslog-8.17)
+receives input events from port 514/udp (standard port for BSD syslog 
+protocol) and sends events with facilities 'auth' and 'authpriv' to SEC:
+<p>
+module(load="imudp")
+<br>
+module(load="omprog")
+<p>
+input(type="imudp" port="514")
+<p>
+if $syslogfacility == 4 or $syslogfacility == 10 then {
+<br>
+  action(type="omprog" name="sec"
+<br>
+         binary="/usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-"
+<br>
+         template="RSYSLOG_TraditionalFileFormat" hup.signal="USR2")
+<br>
+}
+<p>
+Due to the <i>hup.signal="USR2"</i> option, rsyslog sends the USR2 signal 
+to the SEC process when rsyslog receives the HUP signal during log rotation.
+(the USR2 signal is used for log rotation by SEC). 
+Without the <i>hup.signal="USR2"</i> option, the SEC process would receive 
+the HUP signal from rsyslog which clears all previous event correlation state 
+and restarts SEC.
 <p>
 If you would like to send events to local copy of rsyslog, you can run
 external tools like /usr/bin/logger from SEC. Also, on many platforms 
