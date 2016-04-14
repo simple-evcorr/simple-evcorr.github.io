@@ -166,7 +166,7 @@ if $syslogfacility == 4 or $syslogfacility == 10 then {
 <p>
 Due to the <i>hup.signal="USR2"</i> option, rsyslog sends the USR2 signal 
 to the SEC process when rsyslog receives the HUP signal during log rotation
-(unlike rsyslog, SEC employs USR2 for log rotation). 
+(unlike rsyslog, SEC employs USR2 for rotating logs). 
 Without the <i>hup.signal="USR2"</i> option, the SEC process would receive 
 the HUP signal from rsyslog which clears all previous event correlation state 
 and restarts SEC.
