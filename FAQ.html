@@ -155,11 +155,11 @@ input(type="imudp" port="514")
 <p>
 if $syslogfacility == 4 or $syslogfacility == 10 then {
 <br>
-  action(type="omprog" name="sec"
+&nbsp;&nbsp;  action(type="omprog" name="sec"
 <br>
-         binary="/usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-"
+&nbsp;&nbsp;  binary="/usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-"
 <br>
-         template="RSYSLOG_TraditionalFileFormat" hup.signal="USR2")
+&nbsp;&nbsp;  template="RSYSLOG_TraditionalFileFormat" hup.signal="USR2")
 <br>
 }
 </i>
