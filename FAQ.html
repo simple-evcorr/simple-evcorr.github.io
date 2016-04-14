@@ -143,8 +143,10 @@ rsyslog has been restarted or shut down.
 Rsyslog-v8 supports several options which ease the integration of
 SEC with rsyslog. The following example (tested with rsyslog-8.17)
 receives input events from port 514/udp (standard port for BSD syslog 
-protocol) and sends events with facilities 'auth' and 'authpriv' to SEC:
+protocol) and sends events with facilities <i>auth</i> and <i>authpriv</i> 
+to SEC:
 <p>
+<i>
 module(load="imudp")
 <br>
 module(load="omprog")
@@ -160,6 +162,7 @@ if $syslogfacility == 4 or $syslogfacility == 10 then {
          template="RSYSLOG_TraditionalFileFormat" hup.signal="USR2")
 <br>
 }
+</i>
 <p>
 Due to the <i>hup.signal="USR2"</i> option, rsyslog sends the USR2 signal 
 to the SEC process when rsyslog receives the HUP signal during log rotation.
