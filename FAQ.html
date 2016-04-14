@@ -144,7 +144,7 @@ Rsyslog-v8 supports several options which ease the integration of
 SEC with rsyslog. The following example (tested with rsyslog-8.17)
 receives input events from port 514/udp (standard port for BSD syslog 
 protocol) and sends events with facilities <i>auth</i> and <i>authpriv</i> 
-to SEC:
+to SEC, using rsyslog traditional file format:
 <p>
 <i>
 module(load="imudp")
@@ -157,9 +157,9 @@ if $syslogfacility == 4 or $syslogfacility == 10 then {
 <br>
 &nbsp;&nbsp;  action(type="omprog" name="sec"
 <br>
-&nbsp;&nbsp;  binary="/usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-"
+&nbsp;&nbsp;&nbsp;&nbsp;  binary="/usr/local/bin/sec --conf=/etc/sec/sec.conf --notail --input=-"
 <br>
-&nbsp;&nbsp;  template="RSYSLOG_TraditionalFileFormat" hup.signal="USR2")
+&nbsp;&nbsp;&nbsp;&nbsp;  template="RSYSLOG_TraditionalFileFormat" hup.signal="USR2")
 <br>
 }
 </i>
