@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: June 2016<BR>
+Section: User Commands  (1)<BR>Updated: February 2017<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -48,6 +48,7 @@ Section: User Commands  (1)<BR>Updated: June 2016<BR>
 <DT><A HREF="#lbBJ">ACKNOWLEDGMENTS</A><DD>
 <DT><A HREF="#lbBK">SEE ALSO</A><DD>
 </DL>
+
 <HR>
 
 <A NAME="lbAB">&nbsp;</A>
@@ -110,6 +111,15 @@ sec - simple event correlator
 <BR>
 
 [--dump=&lt;dumpfile&gt;]
+<BR>
+
+[--user=&lt;username&gt;]
+<BR>
+
+[--group=&lt;groupname&gt; ...]
+<BR>
+
+[--umask=&lt;mode&gt;]
 <BR>
 
 [--dumpfts | --nodumpfts]
@@ -402,28 +412,23 @@ thresh=3
 type=EventGroup
 <BR>
 
-init=create USER_COUNTING
-<BR>
-
-end=delete USER_COUNTING
-<BR>
-
 ptype=RegExp
 <BR>
 
 pattern=3_SSH_LOGIN_FAILURES_FOR_(\S+)
 <BR>
 
-context=!USER_$1_COUNTED
+context=!USER_$1_COUNTED &amp;&amp; !COUNTING_OFF
 <BR>
 
-count=alias USER_COUNTING USER_$1_COUNTED
+count=create USER_$1_COUNTED 60
 <BR>
 
 desc=Repeated SSH login failures for 30 distinct users within 1m
 <BR>
 
-action=pipe '%s' /bin/mail -s 'SSH login alert' <A HREF="mailto:root@localhost">root@localhost</A>
+action=pipe '%s' /bin/mail -s 'SSH login alert' <A HREF="mailto:root@localhost">root@localhost</A>; \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;create&nbsp;COUNTING_OFF&nbsp;3600
 <BR>
 
 window=60
@@ -444,22 +449,16 @@ by SEC, they are treated like regular events received from input sources and
 are matched against rules. 
 The regular expression pattern of the second rule will match the
 3_SSH_LOGIN_FAILURES_FOR_&lt;username&gt; event and start a new event correlation
-operation if no such events have been previously seen. When the operation is 
-initialized, the context USER_COUNTING is created, and when the operation 
-finishes, this context is deleted (as specified by the
-<I>init</I>
-
-and
-<I>end</I>
-
-fields). Also, each time a synthetic event for some user name has matched 
-the rule, a context alias for that user name is created (see the 
+operation if no such events have been previously seen.  
+Also, each time a synthetic event for some user name has matched the rule, 
+a context with the lifetime of 1 minute for that user name is created (see the 
 <I>count</I>
 
-field). Note that this
-prevents further matches for the same user name, since a synthetic event
-for &lt;username&gt; can match the rule only if the context alias 
-USER_&lt;username&gt;_COUNTED *does not* exist (as requested by the
+field). 
+Note that this prevents further matches for the same user name, since 
+a synthetic event for &lt;username&gt; can match the rule only if the context
+USER_&lt;username&gt;_COUNTED *does not* exist (as requested by the boolean
+expression in the
 <I>context</I>
 
 field; see CONTEXTS AND CONTEXT EXPRESSIONS section for more information). 
@@ -470,11 +469,17 @@ root-user if 30 synthetic events have been observed within 1 minute (see the
 and
 <I>window</I>
 
-fields). Note that due to the use of the USER_&lt;username&gt;_COUNTED aliases, all 
+fields). Note that due to the use of the USER_&lt;username&gt;_COUNTED contexts, all 
 synthetic events concern different user names. After sending an e-mail warning,
-the operation will continue to run until the 1 minute event correlation
-window expires. When the operation finishes, the deletion of the 
-USER_COUNTING context also erases the USER_&lt;username&gt;_COUNTED aliases. 
+the operation will also create the context COUNTING_OFF with the lifetime of
+1 hour, and will continue to run until the 1 minute event correlation
+window expires. After the operation has finished, the presence of the
+COUNTING_OFF context will keep the second rule disabled (as requested by 
+the boolean expression in the
+<I>context</I>
+
+field). Therefore, at most one e-mail warning per 1 hour is issued by 
+above rules.
 <P>
 
 The above examples have presented the event correlation capabilities of SEC 
@@ -538,7 +543,9 @@ if SEC has not observed new data in an input file during &lt;input_timeout&gt;
 seconds (or the file was closed &lt;input_timeout&gt; seconds ago), &lt;timeout_script&gt; 
 will be executed with command line parameters 1 and &lt;the name of the input 
 file&gt;. If fresh data become available again, &lt;timeout_script&gt; will be executed
-with command line parameters 0 and &lt;the name of the input file&gt;. Note that
+with command line parameters 0 and &lt;the name of the input file&gt;. 
+Setting &lt;input_timeout&gt; to 0 disables this behavior (this is also the default). 
+Note that
 <B>--input_timeout </B>
 
 and 
@@ -557,6 +564,7 @@ respectively.
 if an input file is in the closed state (e.g., SEC fails to open the file at 
 startup, because it has not been created yet), SEC will attempt
 to reopen the file after every &lt;reopen_timeout&gt; seconds until open succeeds. 
+Setting &lt;reopen_timeout&gt; to 0 disables this behavior (this is also the default). 
 This option has no meaning when the
 <B>--notail</B>
 
@@ -572,6 +580,7 @@ is a synonym for
 <DD>
 if SEC has not observed new data in an input file, the file will not be polled
 (both for status and data) during the next &lt;check_timeout&gt; seconds.
+Setting &lt;check_timeout&gt; to 0 disables this behavior (this is also the default). 
 Note that 
 <B>--check_timeout</B>
 
@@ -604,7 +613,7 @@ is a synonym for
 
 <DD>
 the number of bytes SEC will attempt to read at once from an input file. 
-Default is 1024 (i.e., read from input files by 1KB blocks).
+Default is 8192 bytes (i.e., read from input files by 8KB blocks).
 <DT><B>--bufsize=&lt;input_buffer_size&gt;</B>
 
 <DD>
@@ -619,6 +628,7 @@ Default is 0 (i.e., determine the size of input buffers automatically).
 
 <DD>
 set an upper limit to the number of events in context event stores. 
+Default is 0 which sets no limit.
 <DT><B>--cleantime=&lt;clean_time&gt;</B>
 
 <DD>
@@ -644,7 +654,7 @@ facility &lt;facility&gt;, e.g.,
 <B><A HREF="/cgi-bin/man/man2html?3+syslog">syslog</A></B>(3)
 
 for possible facility values). Warning: be careful with using this option if 
-SEC is employed for monitoring syslog logfiles, because message loops might
+SEC is employed for monitoring syslog log files, because message loops might
 occur.
 <DT><B>--debug=&lt;debuglevel&gt;</B>
 
@@ -688,7 +698,43 @@ SEC will store its process ID to &lt;pidfile&gt; at startup.
 
 <DD>
 SEC will use &lt;dumpfile&gt; as its dump file for writing performance and debug
-data. See SIGNALS section for more information. Default is /tmp/sec.dump.
+data. With the
+<B>--dumpfts</B>
+
+option, a timestamp suffix is appended to the dump file name.
+See SIGNALS section for more information. Default is /tmp/sec.dump.
+<DT><B>--user=&lt;username&gt;</B>, <B>--group=&lt;groupname&gt;</B>
+
+<DD>
+if SEC is started with effective user ID 0, it will drop root privileges by 
+switching to user &lt;username&gt; and group &lt;groupname&gt;.
+The
+<B>--group</B>
+
+option can't be used without the
+<B>--user</B>
+
+option. If the
+<B>--user</B>
+
+option is given without
+<B>--group</B>,
+
+primary group of the user &lt;username&gt; is assumed for &lt;groupname&gt;. 
+If several groups are provided with multiple
+<B>--group</B>
+
+options, SEC switches to the first group with other groups as supplementary 
+groups.
+<DT><B>--umask=&lt;mode&gt;</B>
+
+<DD>
+set file mode creation mask to &lt;mode&gt; at SEC startup, where &lt;mode&gt; 
+is a value from the range 0..0777 (see also
+<B><A HREF="/cgi-bin/man/man2html?2+umask">umask</A></B>(2)).
+
+Octal, decimal, hexadecimal, and binary values can be specified for &lt;mode&gt; 
+(e.g., octal mask 0027 can also be expressed as 23, 0x17, and 0b000010111).
 <DT><B>--dumpfts</B>, <B>--nodumpfts</B>
 
 <DD>
@@ -696,7 +742,7 @@ if the
 <B>--dumpfts</B>
 
 option is specified, a timestamp suffix (seconds since Epoch) is appended
-to the dump file name when the file is created. Default is
+to the dump file name that reflects the file creation time. Default is
 <B>--nodumpfts</B>.
 
 <DT><B>--quoting</B>, <B>--noquoting</B>
@@ -4744,21 +4790,56 @@ The
 <B>EventGroup</B>
 
 rule runs event correlation operations for counting repeated instances of
-N different events e1,...,eK during T seconds, and taking an action if 
+N different events e1,...,eN during T seconds, and taking an action if 
 threshold conditions c1,...,cN for *all* events are satisfied (i.e., for 
 each event eK there are at least cK event instances in the window).
+Note that the event correlation window of the EventGroup operation 
+is sliding like the window of the SingleWithThreshold operation.
+<P>
+
+Event e1 is described with the 
+<I>pattern</I>
+
+and
+<I>context</I>
+
+field, event e2 is described with the
+<I>pattern2</I>
+
+and
+<I>context2</I>
+
+field, etc.
 The values for N and T are defined by the
 <I>type</I>
 
 and 
 <I>window</I>
 
-field, respectively, while values for c1,...,cN are given with the
-<I>thresh*</I>
+field, respectively. The value for c1 is given with the 
+<I>thresh</I>
 
-fields. Values for N and c1,...,cN default to 1. 
-Note that the event correlation window is sliding like the window of
-the SingleWithThreshold operation.
+field, the value for c2 is given with the
+<I>thresh2</I>
+
+field, etc. 
+Values for N and c1,...,cN default to 1. 
+<P>
+
+In order to match an event with the rule, 
+<I>pattern</I>
+
+and
+<I>context</I>
+
+fields are evaluated first. If they don't match the event, then
+<I>pattern2</I>
+
+and
+<I>context2</I>
+
+are evaluated, etc. If all N conditions are tried without a success,
+the event doesn't match the rule.
 <P>
 
 When an event has matched the rule, SEC evaluates the operation description 
@@ -4771,7 +4852,8 @@ memorize the occurrence time of the event (current time as returned by the
 <B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call), and compare the number of memorized occurrence times for each
-eK with the threshold cK. 
+eK with the threshold cK (i.e., the number of observed instances of eK is 
+compared with the threshold cK).
 If all threshold confitions are satisfied, the operation executes the
 action list defined by the
 <I>action</I>
@@ -4784,8 +4866,8 @@ field is set to No (this is the default).
 However, if
 <I>multact</I>
 
-is set to Yes, the operation will evaluate the threshold conditions on every
-further matching event, executing the action list given with the
+is set to Yes, the operation will re-evaluate the threshold conditions on 
+every further matching event, re-executing the action list given with the
 <I>action</I>
 
 field if all conditions are satisfied, and sliding the event correlation 
@@ -4794,7 +4876,7 @@ the window, the operation will finish).
 <P>
 
 If the rule definition has an optional action list defined with the
-<I>count*</I>
+<I>countK</I>
 
 field for event eK, the operation executes it every time an instance of eK 
 is observed (even if
@@ -5424,12 +5506,18 @@ On the other hand, with
 
 the same specification means 1AM in every last seven days or every Sunday
 in October.
+<P>
+
 Also, unlike some versions of
 <B><A HREF="/cgi-bin/man/man2html?8+cron">cron</A></B>(8),
 
 SEC is not restricted to take action only during the first second of
-the current minute (for example, if SEC is started at the 22th second
-of a minute, the wildcard condition produces a match for this minute).
+the current minute. For example, if SEC is started at the 22th second
+of a minute, the wildcard condition produces a match for this minute.
+As another example, if the time specification matches the current minute
+but the context expression evaluates FALSE during the first half of the
+minute, the Calendar rule will execute the action list in the middle of
+this minute when the expression value becomes TRUE.
 <P>
 
 The Calendar rule supports the following fields:
@@ -7178,7 +7266,7 @@ action=write - %s
 This section presents an example rulebase for managing Cisco devices.
 It is assumed that the managed devices have syslog 
 logging enabled, and that all syslog messages are sent to a central host 
-and written to logfile(s) that are monitored by SEC.
+and written to log file(s) that are monitored by SEC.
 <P>
 
 # Set up contexts NIGHT and WEEKEND for nights 
@@ -7863,7 +7951,7 @@ to the SEC dump file.
 <DT><B>SIGUSR2</B>
 
 <DD>
-SEC will reopen its logfile (useful for logfile rotation), and also close
+SEC will reopen its log file (useful for log file rotation), and also close
 its output files and sockets which will be reopened on demand.
 <DT><B>SIGINT</B>
 
@@ -7931,7 +8019,9 @@ helped to develop SEC.
 
 <B><A HREF="/cgi-bin/man/man2html?3+syslog">syslog</A></B>(3),
 
-<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2),
+
+<B><A HREF="/cgi-bin/man/man2html?2+umask">umask</A></B>(2)
 
 <P>
 
@@ -7939,6 +8029,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 11:30:41 GMT, June 13, 2016
+Time: 09:47:10 GMT, February 03, 2017
 </BODY>
 </HTML>
