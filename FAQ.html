@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: April 14, 2016<p>
+Updated: May 31, 2017<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -63,6 +63,8 @@ that would be able to report the name of the source for matching lines?
 How to report the name of the internal context for input source? <br>
 
 <a href="#20">Q20</a>: How can I limit the run time of child processes? <br>
+  
+<a href="#21">Q21</a>: How can I use SEC with systemd? <br>
 
 <p>
 
@@ -989,4 +991,93 @@ action=shellcmd /usr/local/bin/wrapper.pl 15 9 /bin/myprog
 
 <p>
 
+<a name="21">
+<b>Q21: How can I use SEC with systemd?</b>
+<p>
+A: In order to integrate SEC with systemd, you need to set up a systemd service file 
+and environment file for SEC. If you wish to run a single instance of SEC, you can 
+just set up a simple <i>sec.service</i> service file (e.g., on RHEL/Centos/Fedora platform 
+this file is located in <i>/usr/lib/systemd/system</i> directory) without having 
+the environment file:
+<p>
+[Unit]
+<br>
+Description=Simple Event Correlator script to filter log file entries
+<br>
+After=syslog.target
+<p>
+[Service]
+<br>
+Type=forking
+<br>
+PIDFile=/run/sec.pid
+<br>
+ExecStart=/usr/bin/sec --detach --pid=/run/sec.pid --conf=/etc/sec/*.sec --input=/var/log/messages --log=/var/log/sec --intevents
+<p>
+[Install]
+<br>
+WantedBy=multi-user.target
+<p>
+Note that the above service file provides all command line options for a single SEC process, 
+and the environment file is thus not necessary. Also note that the <i>PIDFile</i> 
+directive of the <i>sec.service</i> file has to refer to the pid file created by SEC with 
+the <i>--pid</i> command line option. After setting up this file, the command line 
+<i>systemctl start sec</i> will start SEC, while <i>systemctl enable sec</i> will enable 
+starting it at boot.
+<p>
+However, if you wish to run several SEC instances, a special service file <i>sec@.service</i> 
+needs to be defined which takes advantage of the %I specifier for referring to one particular 
+instance (the use of @-sign in the service file name indicates it is used for multiple instances). 
+For example:
+<p>
+[Unit]
+<br>
+Description=Simple Event Correlator (instance %I)
+<br>
+After=syslog.target
+<p>
+[Service]
+<br>
+Type=forking
+<br>
+PIDFile=/run/sec-%I.pid
+<br>
+ExecStart=/usr/bin/sec --detach --pid=/run/sec-%I.pid $OPTIONS_%I
+<br>
+EnvironmentFile=/etc/sysconfig/sec
+<p>
+[Install]
+<br>
+WantedBy=multi-user.target
+<p>
+Note that this time only few command line options are provided in the service file 
+which are common for all instances, while instance specific options are given in 
+the environment file <i>/etc/sysconfic/sec</i>. The environment file has to be referred to 
+with the <i>EnvironmentFile</i> directive in the <i>sec@.service</i> file.
+Also note that the <i>ExecStart</i> directive uses the $OPTIONS_%I variable in the SEC 
+command line which holds instance specific command line options. For each SEC instance, 
+a separate variable is defined in the <i>/etc/sysconfig/sec</i> environment file. For example, 
+if you want to run two SEC instances called <i>suricata</i> and <i>os</i>, you can set up 
+the following environment file:
+<p> 
+OPTIONS_suricata="--conf=/etc/sec/suricata/*.sec --input=/var/log/suricata/fast.log --user=suricata --umask=027"
+<br>
+OPTIONS_os="--conf=/etc/sec/os/*.sec --input=/var/log/messages"
+<p>
+According to the OPTIONS_suricata variable, the <i>suricata</i> instance of SEC will monitor 
+the input file <i>/var/log/suricata/fast.log</i> with rules loaded from files 
+<i>/etc/sec/suricata/*.sec</i>. Also, this instance will run with permissions of user <i>suricata</i> 
+with file creation mask set to 027. Finally, according to generic options defined in 
+the <i>sec@.service</i> file, this instance will run as a daemon (because of <i>--detach</i> option) 
+and will store its process ID to <i>/run/sec-suricata.pid</i>.
+According to the OPTIONS_os variable, the <i>os</i> instance of SEC will monitor the input 
+file <i>/var/log/messages</i> with SEC rules loaded from <i>/etc/sec/os/*.sec</i>. 
+Also, the instance will run as a daemon with root privileges (default behavior if <i>--user</i> 
+option is not given), storing its process ID to <i>/run/sec-os.pid</i>.
+<p>
+In order to enable both instances, command lines <i>systemctl enable sec@suricata</i> 
+and <i>systemctl enable sec@os</i> have to be executed, while starting the instances can be 
+accomplished with <i>systemctl start sec@suricata</i> and <i>systemctl start sec@os</i>.
+
+<p>
 </html>
