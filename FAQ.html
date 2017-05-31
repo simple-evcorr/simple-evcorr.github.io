@@ -64,7 +64,7 @@ How to report the name of the internal context for input source? <br>
 
 <a href="#20">Q20</a>: How can I limit the run time of child processes? <br>
   
-<a href="#21">Q21</a>: How can I use SEC with systemd? <br>
+<a href="#21">Q21</a>: How can I integrate SEC with systemd? <br>
 
 <p>
 
@@ -992,12 +992,12 @@ action=shellcmd /usr/local/bin/wrapper.pl 15 9 /bin/myprog
 <p>
 
 <a name="21">
-<b>Q21: How can I use SEC with systemd?</b>
+<b>Q21: How can I integrate SEC with systemd?</b>
 <p>
 A: In order to integrate SEC with systemd, you need to set up a systemd service file 
 and environment file for SEC. If you wish to run a single instance of SEC, you can 
 just set up a simple <i>sec.service</i> service file (e.g., on RHEL/Centos/Fedora platform 
-this file is located in <i>/usr/lib/systemd/system</i> directory) without having 
+this file is located in the <i>/usr/lib/systemd/system</i> directory) without having 
 the environment file:
 <p>
 [Unit]
@@ -1058,7 +1058,7 @@ Also note that the <i>ExecStart</i> directive uses the $OPTIONS_%I variable in t
 command line which holds instance specific command line options. For each SEC instance, 
 a separate variable is defined in the <i>/etc/sysconfig/sec</i> environment file. For example, 
 if you want to run two SEC instances called <i>suricata</i> and <i>os</i>, you can set up 
-the following environment file:
+the environment file <i>/etc/sysconfig/sec</i> as follows:
 <p> 
 OPTIONS_suricata="--conf=/etc/sec/suricata/*.sec --input=/var/log/suricata/fast.log --user=suricata --umask=027"
 <br>
@@ -1075,9 +1075,18 @@ file <i>/var/log/messages</i> with SEC rules loaded from <i>/etc/sec/os/*.sec</i
 Also, the instance will run as a daemon with root privileges (default behavior if <i>--user</i> 
 option is not given), storing its process ID to <i>/run/sec-os.pid</i>.
 <p>
-In order to enable both instances, command lines <i>systemctl enable sec@suricata</i> 
-and <i>systemctl enable sec@os</i> have to be executed, while starting the instances can be 
-accomplished with <i>systemctl start sec@suricata</i> and <i>systemctl start sec@os</i>.
+In order to enable both instances, the following command lines have to be executed:
+<p>
+<i>systemctl enable sec@suricata</i> 
+<br>
+<i>systemctl enable sec@os</i> 
+<p>
+Also, starting the instances can be accomplished with 
+<p>
+<i>systemctl start sec@suricata</i>
+<br>
+<i>systemctl start sec@os</i>
+<p>
 
 <p>
 </html>
