@@ -998,7 +998,7 @@ A: In order to integrate SEC with systemd, you need to set up a systemd service 
 and environment file for SEC. If you wish to run a single instance of SEC, you can 
 just set up a simple <i>sec.service</i> service file (e.g., on RHEL/Centos/Fedora platform 
 this file is located in the <i>/usr/lib/systemd/system</i> directory) without having 
-the environment file:
+the environment file. For example, <i>sec.service</i> could have the following content:
 <p>
 [Unit]
 <br>
