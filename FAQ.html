@@ -1000,6 +1000,7 @@ just set up a simple <i>sec.service</i> service file (e.g., on RHEL/Centos/Fedor
 this file is located in the <i>/usr/lib/systemd/system</i> directory) without having 
 the environment file. For example, <i>sec.service</i> could have the following content:
 <p>
+<i>
 [Unit]
 <br>
 Description=Simple Event Correlator script to filter log file entries
@@ -1017,6 +1018,7 @@ ExecStart=/usr/bin/sec --detach --pid=/run/sec.pid --conf=/etc/sec/*.sec --input
 [Install]
 <br>
 WantedBy=multi-user.target
+</i>
 <p>
 Note that the above service file provides all command line options for a single SEC process, 
 and the environment file is thus not necessary. Also note that the <i>PIDFile</i> 
@@ -1030,6 +1032,7 @@ needs to be defined which takes advantage of the %I specifier for referring to o
 instance (the use of @-sign in the service file name indicates it is used for multiple instances). 
 For example:
 <p>
+<i>
 [Unit]
 <br>
 Description=Simple Event Correlator (instance %I)
@@ -1049,6 +1052,7 @@ EnvironmentFile=/etc/sysconfig/sec
 [Install]
 <br>
 WantedBy=multi-user.target
+</i>
 <p>
 Note that this time only few command line options are provided in the service file 
 which are common for all instances, while instance specific options are given in 
@@ -1060,9 +1064,11 @@ a separate variable is defined in the <i>/etc/sysconfig/sec</i> environment file
 if you want to run two SEC instances called <i>suricata</i> and <i>os</i>, you can set up 
 the environment file <i>/etc/sysconfig/sec</i> as follows:
 <p> 
+<i>
 OPTIONS_suricata="--conf=/etc/sec/suricata/*.sec --input=/var/log/suricata/fast.log --user=suricata --umask=027"
 <br>
 OPTIONS_os="--conf=/etc/sec/os/*.sec --input=/var/log/messages"
+</i>
 <p>
 According to the OPTIONS_suricata variable, the <i>suricata</i> instance of SEC will monitor 
 the input file <i>/var/log/suricata/fast.log</i> with rules loaded from files 
@@ -1077,15 +1083,19 @@ the <i>--user</i> option is not given), storing its process ID to <i>/run/sec-os
 <p>
 In order to enable both instances, the following command lines have to be executed:
 <p>
-<i>systemctl enable sec@suricata</i> 
+<i>
+systemctl enable sec@suricata
 <br>
-<i>systemctl enable sec@os</i> 
+systemctl enable sec@os
+</i> 
 <p>
 Also, starting the instances can be accomplished with 
 <p>
-<i>systemctl start sec@suricata</i>
+<i>
+systemctl start sec@suricata
 <br>
-<i>systemctl start sec@os</i>
+systemctl start sec@os
+</i>
 <p>
 
 <p>
