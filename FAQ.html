@@ -1068,12 +1068,12 @@ According to the OPTIONS_suricata variable, the <i>suricata</i> instance of SEC 
 the input file <i>/var/log/suricata/fast.log</i> with rules loaded from files 
 <i>/etc/sec/suricata/*.sec</i>. Also, this instance will run with permissions of user <i>suricata</i> 
 with file creation mask set to 027. Finally, according to generic options defined in 
-the <i>sec@.service</i> file, this instance will run as a daemon (because of <i>--detach</i> option) 
-and will store its process ID to <i>/run/sec-suricata.pid</i>.
+the <i>sec@.service</i> file, this instance will run as a daemon (because of the 
+<i>--detach</i> option) and will store its process ID to <i>/run/sec-suricata.pid</i>.
 According to the OPTIONS_os variable, the <i>os</i> instance of SEC will monitor the input 
 file <i>/var/log/messages</i> with SEC rules loaded from <i>/etc/sec/os/*.sec</i>. 
-Also, the instance will run as a daemon with root privileges (default behavior if <i>--user</i> 
-option is not given), storing its process ID to <i>/run/sec-os.pid</i>.
+Also, the instance will run as a daemon with root privileges (default behavior if 
+the <i>--user</i> option is not given), storing its process ID to <i>/run/sec-os.pid</i>.
 <p>
 In order to enable both instances, the following command lines have to be executed:
 <p>
