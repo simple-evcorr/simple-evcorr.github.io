@@ -979,11 +979,11 @@ if ($pid == -1) {
 <br>
 } else { 
 <br>
-&nbsp;&nbsp;  $SIG{ALRM} = sub { kill $sig, $pid; exit(0); }; 
-<br>
 &nbsp;&nbsp;  $SIG{TERM} = sub { kill TERM, $pid; exit(0); }; 
 <br>
 &nbsp;&nbsp;  if (exists($term{$$})) { kill TERM, $pid; exit(0); };
+<br>
+&nbsp;&nbsp;  $SIG{ALRM} = sub { kill $sig, $pid; exit(0); };
 <br>
 &nbsp;&nbsp;  alarm($int); 
 <br>
