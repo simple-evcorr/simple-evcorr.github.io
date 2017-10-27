@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: October 25, 2017<p>
+Updated: October 27, 2017<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -65,7 +65,11 @@ How to report the name of the internal context for input source? <br>
 <a href="#20">Q20</a>: How can I limit the run time of child processes? <br>
   
 <a href="#21">Q21</a>: How can I integrate SEC with systemd? <br>
+  
+<a href="#22">Q22</a>: How can I parse events in JSON format? <br>
 
+<a href="#23">Q23</a>: How can I monitor log files in UTF16 format? <br>
+  
 <p>
 
 <hr>
@@ -1107,6 +1111,27 @@ systemctl start sec@suricata
 systemctl start sec@os
 </i>
 <p>
+
+<p>
+  
+<a name="22">
+<b>Q22: How can I parse events in JSON format?</b>
+<p>
+A: For a recipe, please have a look at the relevant example in SEC rule repository:
+https://github.com/simple-evcorr/rulesets/tree/master/parsing-json
+  
+<p>
+
+<a name="23">
+<b>Q23: How can I monitor log files in UTF16 format?</b>
+<p>
+A: If SEC is started with PERL_UNICODE environment variable set to SAD (that actives UTF8 Perl IO layer for all
+input and output), it can process log file data in UTF8 format. Since there is no similar support for UTF16 in Perl,
+an external plugin is required for UTF16 log files which would convert UTF16 data to UTF8. Unfortunately,
+the command line <i>tail -c +1 -F logfile | iconv -f UTF16 -t UTF8</i>  would not work, since <i>iconv</i> tool
+buffers data in memory until <i>tail</i> closes the pipe. For a workaround, please have a look at an example
+UTF16 converter in SEC rule repository:
+https://github.com/simple-evcorr/rulesets/tree/master/utf16-logfiles
 
 <p>
 </html>
