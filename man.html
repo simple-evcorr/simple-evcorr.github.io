@@ -2,9 +2,9 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: December 2017<BR>
-
+Section: User Commands  (1)<BR>Updated: August 2018<BR>
 <HR>
+
 <A NAME="index">&nbsp;</A><H2>Index</H2>
 <DL>
 <DT><A HREF="#lbAB">NAME</A><DD>
@@ -48,7 +48,6 @@ Section: User Commands  (1)<BR>Updated: December 2017<BR>
 <DT><A HREF="#lbBJ">ACKNOWLEDGMENTS</A><DD>
 <DT><A HREF="#lbBK">SEE ALSO</A><DD>
 </DL>
-
 <HR>
 
 <A NAME="lbAB">&nbsp;</A>
@@ -123,6 +122,9 @@ sec - simple event correlator
 <BR>
 
 [--dumpfts | --nodumpfts]
+<BR>
+
+[--dumpfjson | --nodumpfjson]
 <BR>
 
 [--quoting | --noquoting]
@@ -701,7 +703,10 @@ SEC will use &lt;dumpfile&gt; as its dump file for writing performance and debug
 data. With the
 <B>--dumpfts</B>
 
-option, a timestamp suffix is appended to the dump file name.
+option, a timestamp suffix is appended to the dump file name. With the
+<B>--dumpfjson</B>
+
+option, dump file is produced in JSON format.
 See SIGNALS section for more information. Default is /tmp/sec.dump.
 <DT><B>--user=&lt;username&gt;</B>, <B>--group=&lt;groupname&gt;</B>
 
@@ -744,6 +749,17 @@ if the
 option is specified, a timestamp suffix (seconds since Epoch) is appended
 to the dump file name that reflects the file creation time. Default is
 <B>--nodumpfts</B>.
+
+<DT><B>--dumpfjson</B>, <B>--nodumpfjson</B>
+
+<DD>
+if the
+<B>--dumpfjson</B>
+
+option is specified, dump file is produced in JSON format. 
+Note that this option requires the presence of Perl JSON module.
+Default is
+<B>--nodumpfjson</B>.
 
 <DT><B>--quoting</B>, <B>--noquoting</B>
 
@@ -914,7 +930,10 @@ Default is
 if the
 <B>--childterm</B>
 
-option is specified, SEC will send the SIGTERM signal to all its child processes
+option is specified, SEC will send the 
+<B>SIGTERM </B>
+
+signal to all its child processes
 when it terminates or goes through a full restart. Default is
 <B>--childterm</B>.
 
@@ -1353,19 +1372,25 @@ match variables $+{name} and the $0 variable. The $0 variable holds the entire
 string of last N input lines that the regular expression has matched. 
 Named match variables can be created in newer versions of Perl regular 
 expression language, e.g., 
-(?&lt;myvar&gt;AB|CD) sets $+{myvar} to AB or CD. The special named match variable
-$+{_inputsrc} is created by SEC and holds input file name(s)
-where matching line(s) came from.
+(?&lt;myvar&gt;AB|CD) sets $+{myvar} to AB or CD. Also, SEC creates special named match 
+variables $+{_inputsrc} and $+{_intcontext}. The $+{_inputsrc} variable holds input 
+file name(s) where matching line(s) came from. The $+{_intcontext} variable holds
+the name of current internal context (see INTERNAL EVENTS AND CONTEXTS section
+for more information). If internal context has not been set up for
+the current input source, the variable is set to Perl undefined value.
 <P>
 For example, the following pattern matches the SSH &quot;Connection from&quot; event,
 and sets $0 to the entire event line, both $1 and $+{ip} to the IP address 
-of the remote node, $2 to the port number at the remote node, 
-and $+{_inputsrc} to the input file name:
+of the remote node, and $2 to the port number at the remote node:
 <P>
 ptype=RegExp
 <BR>
 
 pattern=sshd\[\d+\]: Connection from (?&lt;ip&gt;[\d.]+) port (\d+)
+<P>
+If the matching event comes from input file /var/log/messages with internal 
+context MSGS, the $+{_inputsrc} and $+{_intcontext} variables are set to 
+strings &quot;/var/log/messages&quot; and &quot;MSGS&quot;, respectively.
 <P>
 Also, SEC allows for match caching and for the creation of additional named 
 match variables through variable maps which are defined with the
@@ -1425,9 +1450,11 @@ varmap=printer_toner_or_ink_low; message=0; hostname=1
 The pattern matches &quot;printer: toner/ink low&quot; messages in a case insensitive
 manner from printers belonging to .mydomain. Note that the printer hostname
 is assigned to $1 and $+{hostname}, while the whole message line is assigned 
-to $0 and $+{message}. The name of the file where message line came from is
-assigned to $+{_inputsrc}. Also, these variables and their values are stored to 
-the pattern match cache under the name &quot;printer_toner_or_ink_low&quot;.
+to $0 and $+{message}. If the message comes from file /var/log/test which does
+not have an internal context defined, the $+{_inputsrc} variable is set to
+string &quot;/var/log/test&quot;, while $+{_intcontext} is set to Perl undefined value.
+Also, these variables and their values are stored to the pattern match cache 
+under the name &quot;printer_toner_or_ink_low&quot;.
 <P>
 The following pattern definition produces a match if the last two input lines
 are AAA and BBB:
@@ -1449,9 +1476,9 @@ the *same* input file, while the
 
 option lifts that restriction.
 <P>
-In the case of a match, $0 is set to &quot;AAA&lt;NEWLINE&gt;BBB&quot; and $+{_inputsrc} to 
-file name(s) for matching lines. Also, these variable-value pairs are cached 
-under the name &quot;aaa_bbb&quot;.
+In the case of a match, $0 is set to &quot;AAA&lt;NEWLINE&gt;BBB&quot;, $+{_inputsrc} to file name(s) 
+for matching lines, and $+{_intcontext} to the name of current internal context. 
+Also, these variable-value pairs are cached under the name &quot;aaa_bbb&quot;.
 <DT><I>PerlFunc[N]</I>
 
 <DD>
@@ -1491,6 +1518,7 @@ undefined value), the pattern does not match. If the pattern matches,
 return values will be assigned to numbered match variables ($1, $2, etc.). 
 Like with RegExp patterns, the $0 variable is set to matching input line(s),
 the $+{_inputsrc} variable is set to input file name(s),
+the $+{_intcontext} variable is set to the name of current internal context,
 and named match variables can be created from variable maps.
 For example, consider the following pattern definition:
 <P>
@@ -1503,12 +1531,16 @@ The pattern compares last two input lines in a stringwise manner ($_[1]
 holds the last line and $_[0] the preceding one), and matches if the lines
 are different. Note that the result of the comparison is assigned to $1,
 while two matching lines are concatenated (with the newline character
-between them) and assigned to $0. The file name(s) for matching lines are 
-assigned to $+{_inputsrc}.
+between them) and assigned to $0. 
+If matching lines come from input file /var/log/mylog with internal 
+context TEST, the $+{_inputsrc} and $+{_intcontext} variables are set to
+strings &quot;/var/log/mylog&quot; and &quot;TEST&quot;, respectively.
 <P>
 The following pattern produces a match for any line, and sets $1, $2 and
 $3 variables to strings &quot;abc&quot;, &quot;def&quot; and &quot;ghi&quot;, respectively (also,
-$0 is set to the whole input line and $+{_inputsrc} to the input file name):
+$0 is set to the whole input line, $+{_inputsrc} to the input file name,
+and $+{_intcontext} to the name of internal context associated with input
+file $+{_inputsrc}):
 <P>
 ptype=perlfunc
 <BR>
@@ -1517,8 +1549,9 @@ pattern=sub { return (&quot;abc&quot;, &quot;def&quot;, &quot;ghi&quot;); }
 <P>
 The following pattern definition produces a match if the input line is not
 a synthetic event and contains either the string &quot;abc&quot; or &quot;def&quot;. The $0 
-variable is set to the matching line, while $1, $+{file} and $+{_inputsrc}
-are set to the name of the input file: 
+variable is set to the matching line. If matching line comes from /var/log/test
+without an internal context, $+{_intcontext} is set to Perl undefined value,
+while $1, $+{file} and $+{_inputsrc} are set to string &quot;/var/log/test&quot;:
 <P>
 ptype=perlfunc
 <BR>
@@ -1534,9 +1567,9 @@ varmap= file=1
 Finally, if a function pattern returns a single value which is a reference
 to a Perl hash, named match variables are created from key-value pairs 
 in the hash. For example, the following pattern matches a line if it contains
-either the string &quot;three&quot; or &quot;four&quot;. Apart from setting $0 and $+{_inputsrc},
-the pattern also creates match variables $+{three} and $+{four}, and sets 
-them to 3 and 4, respectively:
+either the string &quot;three&quot; or &quot;four&quot;. Apart from setting $0, $+{_inputsrc}
+and $+{_intcontext}, the pattern also creates match variables $+{three} and $+{four}, 
+and sets them to 3 and 4, respectively:
 <P>
 ptype=perlfunc
 <BR>
@@ -1579,7 +1612,7 @@ ptype=cached
 pattern=abc_or_def_found
 <P>
 will also produce a match for this input line, and set the $0, $1, $+{file}, 
-and $+{_inputsrc} variables to values from the previous match.
+$+{_inputsrc}, and $+{_intcontext} variables to values from the previous match.
 <DT><I>NSubStr[N]</I>
 
 <DD>
@@ -1596,7 +1629,7 @@ like
 
 except that the result of the match is negated and variable maps are not 
 supported. Note that the only match variables supported by this pattern type 
-are $0 and $+{_inputsrc}.
+are $0, $+{_inputsrc}, and $+{_intcontext}.
 <DT><I>NPerlFunc[N]</I>
 
 <DD>
@@ -1605,7 +1638,7 @@ like
 
 except that the result of the match is negated and variable maps are not
 supported. Note that the only match variables supported by this pattern type 
-are $0 and $+{_inputsrc}.
+are $0, $+{_inputsrc}, and $+{_intcontext}.
 <DT><I>NCached</I>
 
 <DD>
@@ -2231,12 +2264,59 @@ with the lifetime of 60 seconds, while the action
 <I>write - The names of tests: $1, $2</I>
 
 writes the string &quot;The names of tests: test1, the second test&quot; 
-to standard output.
+to standard output. 
+<P>
+
+Apart from few exceptions explicitly noted, match variables are substituted 
+at the earliest opportunity in action lists.
+For example, consider the following rule definition:
+<P>
+
+type=SingleWithThreshold
+<BR>
+
+ptype=RegExp
+<BR>
+
+pattern=sshd\[\d+\]: Failed .+ for (\S+) from [\d.]+ port \d+ ssh2
+<BR>
+
+desc=Three SSH login failures within 1m
+<BR>
+
+action=pipe 'Three SSH login failures, first user is $1' \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/bin/mail&nbsp;-s&nbsp;'SSH&nbsp;login&nbsp;alert'&nbsp;<A HREF="mailto:root@localhost">root@localhost</A>
+<BR>
+
+window=60
+<BR>
+
+thresh=3
+<P>
+
+When this rule matches an SSH login failure event which starts an event correlation 
+operation, the operation substitutes the $1 match variable in the action list definition 
+with the user name from the matching event, and user names from further events processed 
+by this event correlation operation are not considered for $1. 
+For example, if the following events are observed
+<P>
+
+Dec 16 16:24:52 myserver sshd[13671]: Failed password for root from 10.12.2.5 port 29736 ssh2
+<BR>
+
+Dec 16 16:24:59 myserver sshd[13685]: Failed password for risto from 10.12.2.5 port 41063 ssh2
+<BR>
+
+Dec 16 16:25:01 myserver sshd[13689]: Failed password for oracle from 10.12.2.5 port 11204 ssh2
+<P>
+
+then all events are processed by the same operation, and the message 
+&quot;Three SSH login failures, first user is root&quot; is mailed to <A HREF="mailto:root@localhost">root@localhost</A>.
+<P>
+
 In order to use semicolons inside a non-constant parameter, 
 the parameter must be enclosed in parentheses (the outermost set of
 parentheses will be removed by SEC during configuration file parsing).
-<P>
-
 For example, the following action list consists of 
 <I>delete</I>
 
@@ -2422,16 +2502,16 @@ form feed character).
 <P>
 
 For example, the following action list assigns the current time in 
-human readable format and the content of the $0 match variable to 
+human-readable format and the string &quot;This is a test event&quot; to 
 the %text action list variable, and mails the value of %text to
 <A HREF="mailto:root@localhost">root@localhost</A>:
 <P>
 
-action=assign %text %t: $0; pipe '%text' /bin/mail <A HREF="mailto:root@localhost">root@localhost</A>
+action=assign %text %t: This is a test event; \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pipe&nbsp;'%text'&nbsp;/bin/mail&nbsp;<A HREF="mailto:root@localhost">root@localhost</A>
 <P>
 
-If the action list is executed at Nov 19 10:58:51 2015 and the $0
-match variable has the value &quot;This is a test event&quot;, the
+If the action list is executed at Nov 19 10:58:51 2015, the
 <I>assign</I>
 
 action sets the %text action list variable to the string
@@ -2516,7 +2596,14 @@ options. The level of the log message is set to 4 (see the
 <B>--debug</B>
 
 option for more information on log message levels). Default value
-for &lt;string&gt; is %s.
+for &lt;string&gt; is %s. For example, consider the following action list definition:
+<P>
+action=logonly This is a test
+<P>
+The above 
+<I>logonly</I>
+
+action logs the message &quot;This is a test&quot; with level 4.
 <DT><I>write &lt;filename&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2532,9 +2619,25 @@ the following
 <I>write</I>
 
 actions will access an already open file. 
-However, several signals cause the file to be closed and reopened
-(see SIGNALS section for more information).
+However, several signals cause the file to be closed and reopened, and for
+rotating files created with
+<I>write</I>
+
+action, the
+<B>SIGUSR2</B>
+
+signal can be used (see SIGNALS section for more information).
 Default value for &lt;string&gt; is %s.
+For example, consider the following action list definition:
+<P>
+action=write /var/log/test.log %t $0
+<P>
+The above
+<I>write</I>
+
+action prepends human-readable timestamp and separating space character to 
+the value of the $0 match variable, and the resulting string is appended to file 
+/var/log/test.log with terminating newline.
 <DT><I>writen &lt;filename&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2549,6 +2652,17 @@ and
 <I>writen</I>
 
 actions share the same filehandle for accessing the file.
+For example, consider the following action list definition:
+<P>
+action=writen - ab; writen - c; writen - %.nl
+<P>
+The above action list writes the string &quot;abc&lt;NEWLINE&gt;&quot; to standard output,
+and is thus identical to
+<I>write - abc</I>
+
+(and also to
+<I>writen - abc%.nl</I>).
+
 <DT><I>closef &lt;filename&gt;</I>
 
 <DD>
@@ -2574,6 +2688,17 @@ action,
 <I>owritecl</I>
 
 does not use existing filehandle, but opens and closes the file separately.
+For example, consider the following action list definition:
+<P>
+action=owritecl /var/log/test-%{.year}%{.mon}%{.mday} $0%{.nl}
+<P>
+The above
+<I>owritecl</I>
+
+action appends the value of the $0 match variable with terminating newline to file 
+/var/log/test-YYYYMMDD, where YYYYMMDD reflects the current date (e.g., if the current 
+date is April 1 2018, the file is /var/log/test-20180401). Since the file is closed
+after each write, the old file will not be left open when date changes.
 <DT><I>udgram &lt;filename&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2587,6 +2712,18 @@ actions will access an already open socket.
 However, several signals cause the socket to be closed and reopened
 (see SIGNALS section for more information).
 Default value for &lt;string&gt; is %s.
+For example, consider the following action list definition:
+<P>
+action=udgram /dev/log &lt;30&gt;%.monstr %.mdaystr %.hmsstr sec: This is a test
+<P>
+The above
+<I>udgram</I>
+
+action sends a syslog message to local syslog daemon via /dev/log socket, where 
+message priority is 30 (corresponds to the &quot;daemon&quot; facility and &quot;info&quot; level), 
+syslog tag is &quot;sec&quot; and message text is &quot;This is a test&quot;. Note that message substring
+&quot;%.monstr %.mdaystr %.hmsstr&quot; evaluates to timestamp in BSD syslog format
+(e.g., Mar 31 15:36:07).
 <DT><I>closeudgr &lt;filename&gt;</I>
 
 <DD>
@@ -2626,6 +2763,17 @@ actions for the same remote peer will use an already existing socket.
 However, several signals cause the socket to be closed and recreated
 (see SIGNALS section for more information).
 Default value for &lt;string&gt; is %s.
+For example, consider the following action list definition:
+<P>
+action=udpsock mysrv:514 &lt;13&gt;%.monstr %.mdaystr %.hmsstr myhost test: $0
+<P>
+The above
+<I>udpsock</I>
+
+action sends a BSD syslog message to port 514/udp of remote syslog server mysrv, 
+where message priority is 13 (corresponds to the &quot;user&quot; facility and &quot;notice&quot; level), 
+name of the local host is &quot;myhost&quot;, syslog tag is &quot;test&quot; and message text is 
+the value if the $0 match variable.
 <DT><I>closeudp &lt;host&gt;:&lt;port&gt;</I>
 
 <DD>
@@ -2655,6 +2803,18 @@ actions for the same peer will use an already existing socket.
 However, several signals cause the socket to be closed and recreated
 (see SIGNALS section for more information).
 Default value for &lt;string&gt; is %s.
+For example, consider the following action list definition:
+<P>
+action=tcpsock grsrv:2003 ssh.login.failures %{num} %{u}%{.nl}
+<P>
+The above
+<I>tcpsock</I>
+
+action sends the value of the action list variable %{num} to port 2003/tcp
+of the Graphite server grsrv, so that the value is recorded under metric path
+ssh.login.failures. Note that the %{u} action list variable evaluates
+to current time in seconds since Epoch and is used for setting the timestamp
+for recorded value.
 <DT><I>closetcp &lt;host&gt;:&lt;port&gt;</I>
 
 <DD>
@@ -2674,6 +2834,29 @@ is quoted with single quotes before substituting it into &lt;cmdline&gt;;
 if the value of %s contains single quotes, they are masked with backslashes
 (e.g., abc is converted to 'abc' and aa'bb is converted to 'aa'\''bb').
 For additional information, see INTERPROCESS COMMUNICATION section.
+For example, consider the following action list definition:
+<P>
+action=shellcmd (cat /tmp/report | mail root; rm -f /tmp/report); \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;logonly&nbsp;Report&nbsp;sent&nbsp;to&nbsp;user&nbsp;root
+<P>
+The
+<I>shellcmd</I>
+
+action of this action list executes the command line 
+<P>
+cat /tmp/report | mail root; rm -f /tmp/report
+<P>
+and the
+<I>logonly</I>
+
+action logs the message &quot;Report sent to user root&quot;. 
+Since the command line contains a semicolon which is used for separating
+<I>shellcmd</I>
+
+and
+<I>logonly</I>
+
+actions, the command line is enclosed in parentheses.
 <DT><I>spawn &lt;cmdline&gt;</I>
 
 <DD>
@@ -2691,6 +2874,16 @@ action for more information). If the
 command line option is given, internal context _INTERNAL_EVENT is set
 up before each synthetic event is processed (see INTERNAL EVENTS AND
 CONTEXTS section for more information).
+For example, consider the following action list definition:
+<P>
+action=spawn (cat /tmp/events; rm -f /tmp/events)
+<P>
+The above
+<I>spawn</I>
+
+action will generate synthetic events from all lines in file /tmp/events
+and remove the file. Since the command line contains a semicolon which
+is used for separating actions, the command line is enclosed in parentheses.
 <DT><I>cspawn &lt;name&gt; &lt;cmdline&gt;</I>
 
 <DD>
@@ -2715,6 +2908,19 @@ If &lt;string&gt; contains semicolons, &lt;string&gt; must be enclosed in parent
 Default value for &lt;string&gt; is %s.
 If &lt;cmdline&gt; is omitted, &lt;string&gt; is written to standard output.
 For additional information, see INTERPROCESS COMMUNICATION section.
+For example, consider the following action list definition:
+<P>
+action=pipe 'Offending activities from host $1' /bin/mail <A HREF="mailto:root@localhost">root@localhost</A>
+<P>
+The above
+<I>pipe</I>
+
+action writes the line &quot;Offending activities from host &lt;hostname&gt;&quot;
+to the standard input of the
+<I>/bin/mail <A HREF="mailto:root@localhost">root@localhost</A></I>
+
+command which sends this line to <A HREF="mailto:root@localhost">root@localhost</A> via e-mail
+(&lt;hostname&gt; is the value of the $1 match variable). 
 <DT><I>create [&lt;name&gt; [&lt;time&gt; [&lt;action list&gt;] ] ]</I>
 
 <DD>
@@ -2732,6 +2938,33 @@ If an already existing context is recreated with
 
 its remaining lifetime is set to &lt;time&gt; seconds, its action list is
 reinitialized, and its event store is emptied.
+For example, consider the following action list definition:
+<P>
+action=write /var/log/test.log $0; create TIMER 3600 \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(&nbsp;logonly&nbsp;Closing&nbsp;/var/log/test.log;&nbsp;closef&nbsp;/var/log/test.log&nbsp;)
+<P>
+The
+<I>write</I>
+
+action from the above action list appends the value of the $0 match variable
+to file /var/log/test.log, while the
+<I>create</I>
+
+action creates the context TIMER which will exist for 3600 seconds. Since this
+context is recreated at each write, the context can expire only if the action
+list has not been executed for more than 3600 seconds (i.e., the action list has 
+last updated the file more than 1 hour ago). If that is the case, the action list
+<P>
+logonly Closing /var/log/test.log; closef /var/log/test.log
+<P>
+is executed which logs the message &quot;Closing /var/log/test.log&quot; with the
+<I>logonly</I>
+
+action and closes /var/log/test.log with the
+<I>closef</I>
+
+action. When the execution of this action list is complete, the TIMER context
+is deleted.
 <DT><I>delete [&lt;name&gt;]</I>
 
 <DD>
@@ -2752,7 +2985,7 @@ Change settings for the context &lt;name&gt;. The creation time of the context
 is set to the current time, and the lifetime of the context is set to &lt;time&gt; 
 seconds.
 If the &lt;action list&gt; parameter is given, the context action list is set 
-to &lt;action list&gt;. 
+to &lt;action list&gt;, otherwise the context action list is not changed. 
 The &lt;name&gt; parameter may not contain whitespace and defaults to %s.
 The &lt;time&gt; parameter must evaluate to an unsigned integer or hyphen (-) 
 at runtime.
@@ -2763,6 +2996,15 @@ If &lt;action list&gt; contains several actions, the list must be enclosed in
 parentheses. In &lt;action list&gt;, the internal context name _THIS may be used
 for referring to the current context (see INTERNAL EVENTS AND CONTEXTS
 section for a detailed discussion).
+For example, consider the following action list definition:
+<P>
+action=set C_$1 30 ( logonly Context C_$1 has expired )
+<P>
+The above
+<I>set</I>
+
+action sets the context C_&lt;suffix&gt; to expire after 30 seconds with a log
+message about expiration (&lt;suffix&gt; is the value of the $1 match variable).
 <DT><I>alias &lt;name&gt; [&lt;alias&gt;]</I>
 
 <DD>
@@ -2806,6 +3048,13 @@ an infinite lifetime, empty action list and empty event store (as with
 before adding the string to event store. 
 If &lt;string&gt; is a multi-line string (i.e., it contains newlines), it is
 split into lines, and each line is appended to the event store separately.
+For example, consider the following action list definition:
+<P>
+action=add EVENTS This is a test; add EVENTS This is a test2
+<P>
+After the execution of this action list, the last two strings in the event
+store of the EVENTS context are &quot;This is a test&quot; and &quot;This is a test2&quot;
+(in that order).
 <DT><I>prepend &lt;name&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2814,6 +3063,13 @@ Similar to the
 
 action, except that the string &lt;string&gt; is prepended to the beginning
 of the event store of context &lt;name&gt;. 
+For example, consider the following action list definition:
+<P>
+action=prepend EVENTS This is a test; prepend EVENTS This is a test2
+<P>
+After the execution of this action list, the first two strings in the event
+store of the EVENTS context are &quot;This is a test2&quot; and &quot;This is a test&quot;
+(in that order).
 <DT><I>fill &lt;name&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2834,6 +3090,16 @@ is not executed.
 The &lt;name&gt; parameter may not contain whitespace, and if &lt;cmdline&gt; is omitted,
 strings are written to standard output.
 For additional information, see INTERPROCESS COMMUNICATION section.
+For example, consider the following action list definition:
+<P>
+action=create PID_$1 60 ( report PID_$1 /bin/mail <A HREF="mailto:root@localhost">root@localhost</A> ); \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;add&nbsp;PID_$1&nbsp;Beginning&nbsp;of&nbsp;the&nbsp;report
+<P>
+The above action list creates the context PID_&lt;suffix&gt; with the lifetime 
+of 60 seconds and sets the first string in the context event store to
+&quot;Beginning of the report&quot; (&lt;suffix&gt; is the value of the $1 match variable).
+When the context expires, all strings from the event store will be mailed
+to <A HREF="mailto:root@localhost">root@localhost</A>.
 <DT><I>copy &lt;name&gt; %&lt;var&gt;</I>
 
 <DD>
@@ -2875,6 +3141,13 @@ otherwise set %&lt;var&gt; to 0.
 Find the number of strings in the event store of context &lt;name&gt;, and
 assign this number to the action list variable %&lt;var&gt;.
 If the context &lt;name&gt; does not exist, %&lt;var&gt; is set to Perl undefined value.
+For example, consider the following action list definition:
+<P>
+action=fill EVENTS Event1; add EVENTS Event2; add EVENTS Event3; \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pop&nbsp;EVENTS&nbsp;%temp1;&nbsp;shift&nbsp;EVENTS&nbsp;%temp2;&nbsp;getsize&nbsp;%size&nbsp;EVENTS
+<P>
+This action list sets the %temp1 action list variable to Event3, %temp2 action 
+list variable to Event1, and %size action list variable to 1.
 <DT><I>getaliases %&lt;var&gt; &lt;name&gt;</I>
 
 <DD>
@@ -2888,11 +3161,44 @@ If the context &lt;name&gt; does not exist, the value of %&lt;var&gt; does not c
 Find the lifetime of context &lt;name&gt;, and assign this number to the action 
 list variable %&lt;var&gt;.
 If the context &lt;name&gt; does not exist, the value of %&lt;var&gt; does not change.
+For example, consider the following action list definition:
+<P>
+action=create TEST 10 ( getltime %time TEST; \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;logonly&nbsp;Context&nbsp;TEST&nbsp;with&nbsp;%time&nbsp;second&nbsp;lifetime&nbsp;has&nbsp;expired&nbsp;)
+<P>
+The above
+<I>create</I>
+
+action configures the context TEST to log its lifetime when it expires.
+<DT><I>setltime &lt;name&gt; [&lt;time&gt;]</I>
+
+<DD>
+Set the lifetime of context &lt;name&gt; to &lt;time&gt;. 
+Specifying 0 for &lt;time&gt; or omitting the value means infinite lifetime.
+Note that unlike the
+<I>set</I>
+
+action, 
+<I>setltime</I>
+
+does not adjust the context creation time. For example, if context TEST
+has been created at 12:01:00 with the lifetime of 60 seconds, then after invoking
+<I>setltime TEST 30 </I>
+
+at 12:01:20 the context would exist until 12:01:30, while invoking
+<I>setltime TEST 10</I>
+
+would immediately expire the context.
 <DT><I>getctime %&lt;var&gt; &lt;name&gt;</I>
 
 <DD>
-Find the creation time of context &lt;name&gt;, and assign this number to the action 
+Find the creation time of context &lt;name&gt;, and assign this timestamp to the action 
 list variable %&lt;var&gt;.
+The value assigned to %&lt;var&gt; is measured in seconds since Epoch 
+(as reported by the
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
+
+system call).
 If the context &lt;name&gt; does not exist, the value of %&lt;var&gt; does not change.
 <DT><I>setctime &lt;time&gt; &lt;name&gt;</I>
 
@@ -2903,6 +3209,12 @@ The &lt;time&gt; parameter must evaluate to seconds since Epoch (as reported by 
 
 system call), and must reflect a time moment between the previous creation
 time and the current time (both endpoints included).
+For example, if context TEST has been created at 12:43:00 with the lifetime 
+of 60 seconds, then after invoking
+<I>setctime %u TEST </I>
+
+at 12:43:25 the context would exist until 12:44:25 (the %u action list
+variable evaluates to current time in seconds since Epoch).
 <DT><I>event [&lt;time&gt;] [&lt;string&gt;]</I>
 
 <DD>
@@ -2919,6 +3231,12 @@ for synthetic event(s) (see INTERNAL EVENTS AND CONTEXTS section for more
 information).
 The &lt;time&gt; parameter is an integer constant. Specifying 0 for &lt;time&gt; or
 omitting the value means &quot;now&quot;. Default value for &lt;string&gt; is %s.
+For example, consider the following action list definition:
+<P>
+action=copy EVENTS %events; event %events
+<P>
+The above action list will create a synthetic event from each string 
+in the event store of the EVENTS context.
 <DT><I>tevent &lt;time&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2961,6 +3279,20 @@ configuration file if an operation with &lt;string&gt; has been started by this
 rule, and the operation is terminated if it exists.
 Default value for &lt;string&gt; is %s.
 For additional information, see EVENT CORRELATION OPERATIONS section.
+For example, consider the following action list definition:
+<P>
+action=reset -1 Ten login failures observed from $1; reset 0
+<P>
+If the above action list is executed by an event correlation operation,
+the first
+<I>reset</I>
+
+action will terminate another event correlation operation which has been started 
+by the previous rule and has the operation description string &quot;Ten login failures 
+observed from &lt;host&gt;&quot; (&lt;host&gt; is the value of the $1 match variable). The second
+<I>reset</I>
+
+action will terminate the calling operation itself.
 <DT><I>getwpos %&lt;var&gt; &lt;offset&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -2978,6 +3310,19 @@ description string &lt;string&gt; and the rule offset &lt;offset&gt;.
 If the operation does not exist, the value of %&lt;var&gt; does not change.
 Default value for &lt;string&gt; is %s.
 For additional information, see EVENT CORRELATION OPERATIONS section.
+For example, consider the following action list definition:
+<P>
+action=getwpos %pos -1 Ten login failures observed from $1
+<P>
+The above
+<I>getwpos</I>
+
+action will find the beginning of the event correlation window for an event
+correlation operation which has been started by the previous rule and has 
+the operation description string &quot;Ten login failures observed from &lt;host&gt;&quot; 
+(&lt;host&gt; is the value of the $1 match variable). If the event correlation
+window begins at April 6 08:03:53 2018 UTC, the value 1523001833 will be
+assigned to the %pos action list variable.
 <DT><I>setwpos &lt;time&gt; &lt;offset&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -3040,6 +3385,27 @@ Since most Perl programs contain semicolons which are also employed by SEC
 as action separators, it is recommended to enclose the &lt;code&gt; parameter in 
 parentheses, in order to mask the semicolons in &lt;code&gt;.
 For additional information, see PERL INTEGRATION section.
+For example, consider the following action list definition:
+<P>
+action=assign %div Division error; eval %div ( $1 / $2 )
+<P>
+The 
+<I>assign</I>
+
+action sets the %div action list variable to the string &quot;Division error&quot;, 
+while the 
+<I>eval</I>
+
+action substitutes the values of $1 and $2 match variables into the string
+&quot;$1 / $2&quot;. Resulting string is treated as Perl code which is first compiled 
+and then executed. For instance, if the values of $1 and $2 are 12 and 4,  
+respectively, the following Perl code is compiled: 12 / 4. Since executing 
+this code yields 3, the 
+<I>eval</I>
+
+action assigns this value to the %div action list variable. 
+Also, if $2 has no value or its value is 0, resulting code leads to compilation 
+or execution error, and %div retains its previous value &quot;Division error&quot;.
 <DT><I>call %&lt;var&gt; %&lt;ref&gt; [&lt;paramlist&gt;]</I>
 
 <DD>
@@ -3059,13 +3425,34 @@ to %&lt;var&gt;. If no value is returned, %&lt;var&gt; is set to Perl undefined 
 If the function encounters a fatal runtime error or %&lt;ref&gt; is not a code 
 reference, the value of %&lt;var&gt; does not change.
 For additional information, see PERL INTEGRATION section.
+For example, consider the following action list definition:
+<P>
+action=eval %func ( sub { return $_[0] + $_[1] } ); \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;call&nbsp;%sum&nbsp;%func&nbsp;$1&nbsp;$2
+<P>
+Since the Perl code provided to
+<I>eval</I>
+
+action is a definition of an anonymous function, its compilation yields
+a code reference which gets assigned to the %func action list variable
+(the function returns the sum of its two input parameters).
+The
+<I>call</I>
+
+action will invoke previously compiled function, using the values of $1 and $2 
+match variables as function parameters, and assigning function return value
+to the %sum action list variable. Therefore, if the values of $1 and $2 are
+2 and 3, respectively, %sum is set to 5.
 <DT><I>lcall %&lt;var&gt; [&lt;paramlist&gt;] -&gt; &lt;code&gt;</I>
+
+<DD>
+<DT><I>lcall %&lt;var&gt; [&lt;paramlist&gt;] :&gt; &lt;code&gt;</I>
 
 <DD>
 Call the precompiled Perl function &lt;code&gt; and assign the result to the action
 list variable %&lt;var&gt;.
-The &lt;code&gt; parameter must be a valid Perl function definition that is compiled
-at SEC startup with the Perl
+The &lt;code&gt; parameter must be a valid Perl anonymous function definition that 
+is compiled at SEC startup with the Perl
 <B>eval</B>()
 
 function, and
@@ -3075,6 +3462,14 @@ must return a code reference.
 The &lt;paramlist&gt; parameter (if given) is a string which specifies 
 parameters for the function. The parameters must be separated by whitespace 
 in the &lt;paramlist&gt; string.
+If &lt;paramlist&gt; is followed by -&gt; operator, parameters are passed to function 
+as Perl scalar values.
+If &lt;paramlist&gt; is followed by :&gt; operator, it is assumed that each parameter
+is a name of an entry in the pattern match cache. If an entry with the given name
+does not exist, Perl undefined value is passed to the function. If an entry with
+the given name exists, a reference to the entry is passed to the function.
+Internally, each pattern match cache entry is implemented as a Perl hash which 
+contains all match variables for the given entry.
 If the function returns a single value, it is assigned to %&lt;var&gt;.
 If the function returns several values s1,...,sn, they are joined into 
 a multi-line string &quot;s1&lt;NEWLINE&gt;...&lt;NEWLINE&gt;sn&quot;, and this string is assigned 
@@ -3085,6 +3480,29 @@ Since most Perl functions contain semicolons which are also employed by SEC
 as action separators, it is recommended to enclose the &lt;code&gt; parameter in 
 parentheses, in order to mask the semicolons in &lt;code&gt;.
 For additional information, see PERL INTEGRATION section.
+For example, consider the following action list definition:
+<P>
+action=lcall %len $1 -&gt; ( sub { return length($_[0]) } )
+<P>
+The above
+<I>lcall</I>
+
+action will take the value of the $1 match variable and find its length in characters,
+assigning the length to the %len action list variable. Note that the function for
+finding the length is compiled when SEC loads its configuration, and all invocations of 
+<I>lcall</I>
+
+will execute already compiled code. 
+As another example, consider the following action list definition:
+<P>
+action=lcall %o SSH :&gt; ( sub { $_[0]-&gt;{&quot;failure&quot;} = 1 } )
+<P>
+The above
+<I>lcall</I>
+
+action will assign 1 to the $+{failure} match variable that has been cached under
+the SSH entry in the pattern match cache (variable will be created if it did not
+exist previously).
 <DT><I>rewrite &lt;lnum&gt; [&lt;string&gt;]</I>
 
 <DD>
@@ -3110,6 +3528,68 @@ leading empty lines. If &lt;string&gt; contains more than &lt;lnum&gt; lines,
 only leading &lt;lnum&gt; lines from &lt;string&gt; are written into the buffer. 
 Default value for &lt;string&gt; is %s. 
 For additional information, see INPUT PROCESSING AND TIMING section.
+<DT><I>addinput &lt;filename&gt; [&lt;offset&gt; [&lt;name&gt;] ]</I>
+
+<DD>
+File &lt;filename&gt; is added to the list of input files and opened, so that
+processing starts from file offset &lt;offset&gt;. The &lt;offset&gt; parameter must
+evaluate to unsigned integer or 
+<B>-</B>
+
+(EOF) at runtime.
+If &lt;offset&gt; is not specified, it defaults to
+<B>- </B>
+
+(i.e., processing starts from the end of file).
+If opening the file fails (e.g., the file does not exist), it will stay in
+the list of input files (e.g., with the
+<B>--reopen-timeout</B>
+
+command line option, SEC will attempt to reopen the file). 
+The &lt;name&gt; parameter defines the internal context which should be used for
+&lt;filename&gt; if the
+<B>--intcontexts</B>
+
+command line option is given (if &lt;name&gt; is omitted but 
+<B>--intcontexts</B>
+
+command line option is present, default internal context will be used).
+See INTERNAL EVENTS AND CONTEXTS section for more information.
+For example, consider the following action list definition:
+<P>
+action=addinput /var/log/test-%{.year}%{.mon}%{.mday} 0 TESTFILE
+<P>
+The above
+<I>addinput</I>
+
+action adds the file /var/log/test-YYYYMMDD to the list of input files,
+where YYYYMMDD reflects the current date. The
+<I>addinput</I>
+
+action will also attempt to open the file, and if open succeeds,
+file will be processed from the beginning. Also, the internal context
+TESTFILE will be used for all events read from the file.
+<DT><I>dropinput &lt;filename&gt;</I>
+
+<DD>
+File &lt;filename&gt; is dropped from the list of input files and closed 
+(if currently open). Note that
+<I>dropinput</I>
+
+action can only be used for input files which have been previously set up with
+<I>addinput</I>
+
+action.
+<DT><I>sigemul &lt;signal&gt;</I>
+
+<DD>
+Emulates the arrival of signal &lt;signal&gt; and triggers its handler.
+The &lt;signal&gt; parameter must evaluate to one of the following strings:
+HUP, ABRT, USR1, USR2, INT, or TERM. For example, the action
+<I>sigemul USR1</I>
+
+triggers the generation of SEC dump file. See the SIGNALS section for
+detailed information on signals that are handled by SEC.
 <DT><I>if %&lt;var&gt; ( &lt;action list&gt; ) [ else ( &lt;action list2&gt; ) ]</I>
 
 <DD>
@@ -3119,12 +3599,49 @@ the action list &lt;action list&gt;. If the second action list &lt;action list2&
 given with the optional else-statement, it is executed if %&lt;var&gt; either does 
 not exist or evaluates false (i.e., %&lt;var&gt; holds 0, empty string or Perl 
 undefined value).
+For example, consider the following action list definition:
+<P>
+action=exists %present REPORT; if %present \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(&nbsp;report&nbsp;REPORT&nbsp;/bin/mail&nbsp;<A HREF="mailto:root@localhost">root@localhost</A>;&nbsp;delete&nbsp;REPORT&nbsp;)&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else&nbsp;(&nbsp;logonly&nbsp;Nothing&nbsp;to&nbsp;report&nbsp;)
+<P>
+If the REPORT context exists, its event store is mailed to <A HREF="mailto:root@localhost">root@localhost</A>
+and the context is deleted, otherwise the message &quot;Nothing to report&quot;
+is logged.
 <DT><I>while %&lt;var&gt; ( &lt;action list&gt; )</I>
 
 <DD>
 Execute the action list &lt;action list&gt; repeatedly as long as the action list 
 variable %&lt;var&gt; evaluates true in the Perl boolean context
 (i.e., it holds a defined value which is neither 0 nor empty string). 
+For example, consider the following action list definition:
+<P>
+action=create REVERSE; getsize %n TEST; \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while&nbsp;%n&nbsp;(&nbsp;pop&nbsp;TEST&nbsp;%e;&nbsp;add&nbsp;REVERSE&nbsp;%e;&nbsp;getsize&nbsp;%n&nbsp;TEST&nbsp;);&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;copy&nbsp;REVERSE&nbsp;%events;&nbsp;fill&nbsp;TEST&nbsp;%events
+<P>
+This action list reverses the order of strings in the event store of
+the context TEST, using the context REVERSE as a temporary storage.
+During each iteration of the while-loop, the last string in the event
+store of TEST is removed with the
+<I>pop</I>
+
+action and appended to the event store of REVERSE with the
+<I>add </I>
+
+action. The loop terminates when all strings have been removed from 
+the event store of TEST (i.e., the 
+<I>getsize</I>
+
+action reports 0 for event store size). Finally, the event store of REVERSE
+is assigned to the %events action list variable with the
+<I>copy</I>
+
+action, and the
+<I>fill</I>
+
+action is used for overwriting the event store of TEST with the value
+of %events. 
 <DT><I>break</I>
 
 <DD>
@@ -4886,6 +5403,8 @@ is set to No and the operation has already executed the action list given
 with
 <I>action</I>).
 
+If the action list contains match variables, they are substituted before
+*each* execution with values from matching the current instance of eK.
 <P>
 
 If the rule definition has an optional action list defined with the
@@ -6735,9 +7254,14 @@ option. With the
 <B>--childterm</B>
 
 option, SEC sleeps for 3 seconds after generating SEC_SHUTDOWN event, and then 
-sends SIGTERM to its child processes (if a child process was triggered by 
+sends 
+<B>SIGTERM </B>
+
+to its child processes (if a child process was triggered by 
 SEC_SHUTDOWN, this delay leaves the process enough time for setting a signal 
-handler for SIGTERM).
+handler for 
+<B>SIGTERM</B>).
+
 <P>
 
 Before generating an internal event, SEC sets up a context named 
@@ -6941,8 +7465,15 @@ action can be used (e.g.,
 Although SEC keeps the named pipe open across different
 <I>write</I>
 
-actions, the pipe will be closed on the reception of SIGHUP, SIGABRT and 
-SIGUSR2 signals. 
+actions, the pipe will be closed on the reception of 
+<B>SIGHUP</B>,
+
+<B>SIGABRT </B>
+
+and 
+<B>SIGUSR2 </B>
+
+signals. 
 Since many UNIX tools terminate on receiving EOF from standard input, 
 they need restarting after such signals have arrived. For this purpose, the
 <B>--intevents</B>
@@ -7142,8 +7673,14 @@ In order to avoid possible clashes with variables inside the SEC
 code itself, user-defined Perl code is executed in the main::SEC namespace 
 (i.e., inside the special package main::SEC). 
 By using the main:: prefix, SEC data structures can be accessed and modified. 
-For example, the following rules restore and save contexts on SEC startup 
-and shutdown (SEC keeps all contexts in %main::context_list hash):
+For example, the following rules restore and save contexts with names MY_*
+on SEC startup and shutdown, using Perl Storable module for saving and restoring
+relevant elements of %main::context_list hash (since code references can't be
+saved/restored with Storable, the following example assumes that context action 
+lists do not contain 
+<I>lcall </I>
+
+actions):
 <P>
 
 type=Single
@@ -7165,7 +7702,7 @@ desc=Load the Storable module and terminate if it is not found
 <BR>
 
 action=eval %ret (require Storable); \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;%ret&nbsp;(&nbsp;logonly&nbsp;Storabe&nbsp;loaded&nbsp;)&nbsp;else&nbsp;(&nbsp;eval&nbsp;%o&nbsp;<A HREF="/cgi-bin/man/man2html?1+exit">exit</A>(1)&nbsp;)&nbsp;
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;%ret&nbsp;(&nbsp;logonly&nbsp;Storable&nbsp;loaded&nbsp;)&nbsp;else&nbsp;(&nbsp;eval&nbsp;%o&nbsp;<A HREF="/cgi-bin/man/man2html?1+exit">exit</A>(1)&nbsp;)&nbsp;
 <P>
 
 type=Single
@@ -7180,14 +7717,14 @@ pattern=SEC_STARTUP
 context=SEC_INTERNAL_EVENT
 <BR>
 
-desc=Restore all SEC contexts from /var/lib/sec/SEC_CONTEXTS on startup
+desc=Restore contexts MY_* from /var/lib/sec/SEC_CONTEXTS on startup
 <BR>
 
-action=lcall %ret -&gt; ( sub { \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;my&nbsp;$ptr&nbsp;=&nbsp;$main::context_list{&quot;SEC_INTERNAL_EVENT&quot;};&nbsp;\
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%main::context_list&nbsp;=&nbsp;\
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%{Storable::retrieve(&quot;/var/lib/sec/SEC_CONTEXTS&quot;)};&nbsp;\
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$main::context_list{&quot;SEC_INTERNAL_EVENT&quot;}&nbsp;=&nbsp;$ptr;&nbsp;}&nbsp;)
+action=lcall %ret -&gt; ( sub { my($ref, $context); \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$ref&nbsp;=&nbsp;Storable::retrieve(&quot;/var/lib/sec/SEC_CONTEXTS&quot;);&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;foreach&nbsp;$context&nbsp;(keys&nbsp;%{$ref})&nbsp;{&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;($context&nbsp;=~&nbsp;/^MY_/)&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;$main::context_list{$context}&nbsp;=&nbsp;$ref-&gt;{$context};&nbsp;}&nbsp;}&nbsp;}&nbsp;)
 <P>
 
 type=Single
@@ -7202,12 +7739,14 @@ pattern=SEC_SHUTDOWN
 context=SEC_INTERNAL_EVENT
 <BR>
 
-desc=Save all SEC contexts into /var/lib/sec/SEC_CONTEXTS on shutdown
+desc=Save contexts MY_* into /var/lib/sec/SEC_CONTEXTS on shutdown
 <BR>
 
-action=lcall %ret -&gt; ( sub { \
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Storable::store(\%main::context_list,&nbsp;\
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;/var/lib/sec/SEC_CONTEXTS&quot;);&nbsp;}&nbsp;)
+action=lcall %ret -&gt; ( sub { my($context, %hash); \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;foreach&nbsp;$context&nbsp;(keys&nbsp;%main::context_list)&nbsp;{&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;($context&nbsp;=~&nbsp;/^MY_/)&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;$hash{$context}&nbsp;=&nbsp;$main::context_list{$context};&nbsp;}&nbsp;}&nbsp;\
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Storable::store(\%hash,&nbsp;&quot;/var/lib/sec/SEC_CONTEXTS&quot;);&nbsp;}&nbsp;)&nbsp;
 <P>
 
 However, note that modifying data structures within SEC code is recommended 
@@ -7982,8 +8521,8 @@ Risto Vaarandi (ristov at users d0t s0urcef0rge d0t net)
 <A NAME="lbBJ">&nbsp;</A>
 <H2>ACKNOWLEDGMENTS</H2>
 
-This work is supported by SEB.
-The author thanks the following people for supplying software patches,
+The author is grateful to SEB Estonia for supporting this work.
+The author also thanks the following people for supplying software patches,
 documentation fixes, and suggesting new features:
 Al Sorrell, Brian Mielke, David Lang, James Brown, Jon Frazier, Mark D. Nagel, 
 Peter Eckel, Rick Casey, and William Gertz. 
@@ -8029,6 +8568,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 18:57:25 GMT, December 12, 2017
+Time: 14:16:57 GMT, August 30, 2018
 </BODY>
 </HTML>
