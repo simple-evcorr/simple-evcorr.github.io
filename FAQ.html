@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: September 6, 2018<p>
+Updated: October 14, 2018<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -72,6 +72,9 @@ How to report the name of the internal context for input source? <br>
   
 <a href="#24">Q24</a>: How can I monitor log files with names that 
 contain timestamps? <br>
+
+<a href="#25">Q25</a>: How can I write a rule that ends processing 
+for matching events? <br>
 
 <p>
 
@@ -721,7 +724,7 @@ regular expressions allow you to use modifiers inside regular expressions:
 etc. <br> 
 (see perlre(1) man page)<br>
 <p>
-For example, if you would like to set 'pattern' field to /[A-Z]/i, 
+For example, if you would like to set <i>pattern</i> field to /[A-Z]/i, 
 correct way of doing that would be 'pattern=(?i)[A-Z]'.
 
 <p>
@@ -1192,6 +1195,28 @@ is created for this file with the lifetime of 86400 seconds (1 day).
 The context will expire after a date change and drop the log file
 from the list of inputs with 'dropinput' action, since the log file
 is no longer relevant for the current day.
+
+<p>
+
+<a name="25">
+<b>Q25: How can I write a rule that ends processing for matching events?</b>
+<p>
+A: If you set the relevant <i>continue*</i> field of the rule to EndMatch,
+event processing will end after the rule has been applied to the event. 
+For having a rule that will end event processing immediately after the event
+has been matched, you can utilize Jump rule without the <i>cfset</i> field
+and <i>continue</i> field set to EndMatch. For example, the following
+Jump rule will end the processing for sshd events (i.e., if an event
+matches regular expression <i>sshd\[\d+\]:</i>, no further rules from any
+of the rule files will be tried for this event):
+<p>
+type=Jump
+<br>
+ptype=RegExp
+<br>
+pattern=sshd\[\d+\]:
+<br>
+continue=EndMatch
 
 <p>
 
