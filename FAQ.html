@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: December 25, 2018<p>
+Updated: December 30, 2018<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -183,12 +183,12 @@ and restarts SEC.
 <p>
 If you would like to send events to local copy of rsyslog, you can run
 external tools like /usr/bin/logger from SEC. Also, on many platforms 
-(e.g., Linux) rsyslog accepts messages from local programs over a UNIX 
+(e.g., Linux) syslog messages from local programs are accepted over a UNIX 
 domain socket. 
 For example, the following SEC action sends to rsyslog an event 
 "This is a test" which is issued with the tag <i>mytest</i>, 
 <i>daemon</i>-facility and <i>info</i>-level. The example assumes that
-rsyslog receives incoming messages from /dev/log socket in datagram mode:
+syslog messages are accepted from /dev/log socket in datagram mode:
 <p>
 action=udgram /dev/log <30>mytest: This is a test
 
