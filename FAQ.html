@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: December 30, 2018<p>
+Updated: January 30, 2019<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -75,6 +75,9 @@ contain timestamps? <br>
 
 <a href="#25">Q25</a>: How can I write a rule that ends processing 
 for matching events? <br>
+
+<a href="#26">Q26</a>: How can I issue commands to SEC via control file
+or FIFO instead of sending signals to SEC process? <br>
 
 <p>
 
@@ -1218,6 +1221,34 @@ continue=EndMatch
 
 <p>
 
-</html>
+<a name="26">
+<b>Q26: How can I issue commands to SEC via control file or FIFO instead of 
+sending signals to SEC process?</b>
+<p>
+A: Set up a dedicated input file or FIFO for commands, and a Single rule 
+for matching these commands and executing 'sigemul' action. For example,
+the following rule assumes that a file or FIFO <i>/var/lib/sec/cmd</i> is 
+used for receiving commands with the format <i>signal NAME</i>, and options 
+<i>--input=/var/lib/sec/cmd --intcontexts</i> have been included in sec
+command line:
+<p>
+type=Single
+<br>
+ptype=RegExp
+<br>
+pattern=^signal (HUP|ABRT|USR1|USR2|INT|TERM)$
+<br>
+context=_FILE_EVENT_/var/lib/sec/cmd
+<br>
+desc=emulate signal $1
+<br>
+action=sigemul $1
+<p>
+For instance, if command string <i>signal USR1</i> is issued to SEC with
+<i>echo 'signal USR1' >> /var/lib/sec/cmd</i>, SEC will create a dump file 
+as if USR1 signal were received.
 
+<p>
+
+</html>
 
