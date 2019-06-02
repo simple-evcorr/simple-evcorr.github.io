@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: October 2018<BR>
+Section: User Commands  (1)<BR>Updated: June 2019<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -3590,6 +3590,19 @@ HUP, ABRT, USR1, USR2, INT, or TERM. For example, the action
 
 triggers the generation of SEC dump file. See the SIGNALS section for
 detailed information on signals that are handled by SEC.
+<DT><I>varset %&lt;var&gt; &lt;entry&gt;</I>
+
+<DD>
+If the pattern match cache entry &lt;entry&gt; exists, set the action list variable 
+%&lt;var&gt; to 1, otherwise set %&lt;var&gt; to 0. For example, if pattern match cache
+contains the entry with the name SSH but not the entry with the name NTP, 
+the action
+<I>varset %ssh SSH</I>
+
+will set the %ssh action list variable to 1, while the action
+<I>varset %ntp NTP</I>
+
+will set the %ntp action list variable to 0.
 <DT><I>if %&lt;var&gt; ( &lt;action list&gt; ) [ else ( &lt;action list2&gt; ) ]</I>
 
 <DD>
@@ -8576,9 +8589,10 @@ helped to develop SEC.
 <P>
 
 <HR>
+
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 21:41:51 GMT, October 12, 2018
+Time: 14:13:52 GMT, June 02, 2019
 </BODY>
 </HTML>
