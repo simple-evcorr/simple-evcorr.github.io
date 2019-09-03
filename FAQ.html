@@ -940,9 +940,9 @@ given number of seconds.
 For example, the following 'spawn' action starts /bin/myprog and terminates
 it with signal 15 (TERM) if it is still running after 10 seconds. After
 producing synthetic events from standard output of /bin/myprog, the 'spawn'
-action also generates a synthetic event with exit code of /bin/myprog
-(by convention, exit code 124 indicates that /bin/prog timed out and was
-terminated by <i>timeout</i> tool):
+action also generates a synthetic event "Exit code: N" with exit code of 
+/bin/myprog (by convention, exit code 124 indicates that /bin/prog timed out 
+and was terminated by <i>timeout</i> tool):
 <p>
 action=spawn ( /usr/bin/timeout -s 15 10 /bin/myprog; /bin/echo -e "\nExit code: $?" )
 <p>
