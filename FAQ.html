@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: January 30, 2019<p>
+Updated: September 3, 2019<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -934,16 +934,20 @@ for getting the name of the internal context for current input source.
 <a name="20">
 <b>Q20: How can I limit the run time of child processes?</b>
 <p>
-A: First, you can schedule the delivery of the ALRM signal for the child 
-process with the alarm(2) system call. For example, the following 'shellcmd' 
-action starts /bin/myprog which will get the ALRM signal after 10 seconds 
-and terminate (provided that no custom handler has been set for ALRM in
-/bin/myprog):
+A: First, you can use the <i>timeout</i> tool for executing command lines
+and terminating them with a signal if the command is still running after
+given number of seconds.
+For example, the following 'spawn' action starts /bin/myprog and terminates
+it with signal 15 (TERM) if it is still running after 10 seconds. After
+producing synthetic events from standard output of /bin/myprog, the 'spawn'
+action also generates a synthetic event with exit code of /bin/myprog
+(by convention, exit code 124 indicates that /bin/prog timed out and was
+terminated by <i>timeout</i> tool):
 <p>
-action=shellcmd ( perl -e 'alarm(10); exec("/bin/myprog")' )
+action=spawn ( /usr/bin/timeout -s 15 10 /bin/myprog; /bin/echo -e "\nExit code: $?" )
 <p>
-If you would like to be able to use other signals for terminating child
-processes, you could use the following fairly simple Perl wrapper script:
+As an alternative to above example, you could also use the following fairly 
+simple Perl wrapper script for limiting the run time of child processes:
 <p>
 <i>
 #!/usr/bin/perl -w
