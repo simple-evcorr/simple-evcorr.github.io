@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: September 3, 2019<p>
+Updated: January 20, 2020<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -38,7 +38,8 @@ correlation operations? How can I see what SEC is currently doing? <br>
 <a href="#12">Q12</a>: How does 'reset' action work? <br>
 
 <a href="#13">Q13</a>: How can I use regular expression modifiers in
-SEC rule definitions (like //i, //m, etc.)? <br>
+SEC rule definitions (like //i, //m, etc.)? How can I insert comments
+into regular expressions? <br>
 
 <a href="#14">Q14</a>: How can I load Perl modules that could be used at 
 SEC runtime? <br>
@@ -713,7 +714,7 @@ my.conf | 4 | Repeated login failures for user admin on tty5 <br>
 
 <a name="13">
 <b>Q13: How can I use regular expression modifiers in SEC rule definitions 
-(like //i, //m, etc.)? </b>
+(like //i, //m, etc.)? How can I insert comments into regular expressions?</b>
 <p>
 
 A: SEC regular expression definitions don't include surrounding slashes, and
@@ -727,6 +728,17 @@ etc. <br>
 <p>
 For example, if you would like to set <i>pattern</i> field to /[A-Z]/i, 
 correct way of doing that would be 'pattern=(?i)[A-Z]'.
+<p>
+In order to insert comments into regular expressions, you can use
+<i>(?#...) constructs. For example, the following definition
+<p>
+pattern=test:\<br>
+(?# this is a comment )\<br>
+(\S+)$<br>
+<p>
+is equivalent to
+<p>
+pattern=test:(\S+)
 
 <p>
 
