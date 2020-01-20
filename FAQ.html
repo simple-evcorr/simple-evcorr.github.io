@@ -741,7 +741,7 @@ pattern=test:(\S+)(?#another comment)$
 <p>
 pattern=test:(\S+)$
 <p>
-When using (?x) modifier for inserting the comment, one has to
+When using the (?x) modifier for inserting the comment, one has to
 bear in mind that multi-line SEC regular expressions are always converted
 into single-line format before they are compiled. For example, consider
 the following pattern definition:
@@ -757,6 +757,8 @@ pattern=(?x)test:# this is a comment (\S+)$
 However, the above pattern is equivalent to
 <p>
 pattern=(?x)test:
+<p>
+which is probably not what was intended.
 
 <p>
 
