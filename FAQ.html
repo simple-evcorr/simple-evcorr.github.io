@@ -730,11 +730,9 @@ For example, if you would like to set <i>pattern</i> field to /[A-Z]/i,
 correct way of doing that would be 'pattern=(?i)[A-Z]'.
 <p>
 In order to insert comments into regular expressions, you can use
-<i>(?#...) constructs. For example, the following definition
+<i>(?#...)</i> constructs. For example, the following definition
 <p>
-pattern=test:\<br>
-(?# this is a comment )\<br>
-(\S+)$<br>
+pattern=test:(?# this is a comment )(\S+)$<br>
 <p>
 is equivalent to
 <p>
