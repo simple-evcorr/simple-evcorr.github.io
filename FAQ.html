@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: January 20, 2020<p>
+Updated: April 1, 2020<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -79,6 +79,9 @@ for matching events? <br>
 
 <a href="#26">Q26</a>: How can I issue commands to SEC via control file
 or FIFO instead of sending signals to SEC process? <br>
+
+<a href="#27">Q27</a>: How can I configure SEC to listen on TCP or UDP
+port for input events? <br>
 
 <p>
 
@@ -1232,6 +1235,137 @@ is created for this file with the lifetime of 86400 seconds (1 day).
 The context will expire after a date change and drop the log file
 from the list of inputs with 'dropinput' action, since the log file
 is no longer relevant for the current day.
+<p>
+In some cases, it is not known in advance when new log files created.
+For example, an application might create a new log file after the previous
+file has reached a specific size, and log files could have the format
+<i>/var/log/mylog-YYYY-MM-DD-HH:MM:SS</i> (e.g., if the log file has been
+created in March 31 2020 at 12:37:44, its name is
+<i>/var/log/mylog-2020-03-31-12:37:44</i>). 
+If SEC is started with the following command line
+<p>
+sec --conf=/etc/sec/track-input.sec --intevents --intcontexts
+<p>
+the following rules from /etc/sec/track-input.sec will implement tracking 
+input log files by timestamp: 
+<p>
+type=Single
+<br>
+ptype=RegExp
+<br>
+pattern=^(?:SEC_STARTUP|SEC_RESTART)$
+<br>
+context=SEC_INTERNAL_EVENT
+<br>
+desc=start log file tracker
+<br>
+action=cspawn LOGTRACKER /usr/local/bin/logtracker.pl '/var/log/mylog-*'
+<p>
+type=Single
+<br>
+ptype=RegExp
+<br>
+pattern=^Open file (.+) (0|-)$
+<br>
+context=LOGTRACKER
+<br>
+desc=open logfile $1 and start reading from offset $2
+<br>
+action=addinput $1 $2
+<p>
+type=Single
+<br>
+ptype=RegExp
+<br>
+pattern=^Close file (.+)$
+<br>
+context=LOGTRACKER
+<br>
+desc=close logfile $1 
+<br>
+action=dropinput $1
+<p>
+The above ruleset employs the following logtracker.pl script: 
+<p>
+<i>
+#!/usr/bin/perl -w
+<p>
+$| = 1;
+<p>
+if (!defined($ARGV[0])) { die "Usage: $0 &lt;file_pattern&gt;\n"; }
+<p>
+$pattern = $ARGV[0];
+<p>
+@files = glob($pattern);
+<p>
+if (scalar(@files)) {
+<br>
+&nbsp;&nbsp;  $logfile = $files[-1];
+<br>
+&nbsp;&nbsp;  print "Open file $logfile -\n";
+<br>
+}
+<p>
+for (;;) {
+<p>
+&nbsp;&nbsp;  sleep(1);
+<p>
+&nbsp;&nbsp;  @files = glob($pattern);
+<p>
+&nbsp;&nbsp;  if (!scalar(@files)) { next; }
+<p>
+&nbsp;&nbsp;  $lastfile = $files[-1];
+<p>
+&nbsp;&nbsp;  if (!defined($logfile)) {
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;    $logfile = $lastfile;
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;    print "Open file $logfile 0\n";
+<br>
+&nbsp;&nbsp;  } elsif (($lastfile cmp $logfile) == 1) {
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;    print "Close file $logfile\n";
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;    $logfile = $lastfile;
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;    print "Open file $logfile 0\n";
+<br>
+&nbsp;&nbsp;  }
+<br>
+}
+</i>
+<p>
+The above script is started with 'cspawn' action on SEC startup or restart, 
+and the script monitors the appearance of new input log files that match
+the pattern <i>/var/log/mylog-*</i>. 
+When a new log file appears, the script generates a synthetic event 
+"Close file &lt;previous_file&gt;" for closing the previous log file, and 
+then generates another synthetic event "Open file &lt;new_file&gt; 0" for 
+opening the new log file and processing it from the beginning. 
+For example, if SEC is monitoring the file 
+<i>/var/log/mylog-2020-03-31-12:37:44</i>
+and new log file <i>/var/log/mylog-2020-04-01-09:52:13</i> appears,
+the logtracker.pl script will generate synthetic events
+"Close file /var/log/mylog-2020-03-31-12:37:44" and
+"Open file /var/log/mylog-2020-04-01-09:52:13 0".
+These events will be matched by second and third rule in above SEC ruleset,
+so that the monitoring of previous log file will be ended with 
+'dropinput /var/log/mylog-2020-03-31-12:37:44' action and the monitoring of 
+new log file will be started with 
+'addinput /var/log/mylog-2020-04-01-09:52:13 0' action
+(since the second parameter of 'addinput' action is 0, processing of
+the file will start from the beginning).
+<p>
+When SEC is started or restarted and the pattern
+<i>/var/log/mylog-*</i> matches, log file with the most recent timestamp
+is selected and SEC will start to monitor the file from the end
+(i.e., already existing lines in the file are not processed).
+For example, if <i>/var/log/mylog-2020-03-31-12:37:44</i> is the log file
+with most recent timestamp, logtracker.pl script will generate the
+synthetic event "Open file /var/log/mylog-2020-03-31-12:37:44 -", and SEC
+will start to tail this log file with 
+'addinput /var/log/mylog-2020-03-31-12:37:44 -' action
+(offset - denotes processing from the end of file).
 
 <p>
 
@@ -1283,6 +1417,31 @@ action=sigemul $1
 For instance, if command string <i>signal USR1</i> is issued to SEC with
 <i>echo 'signal USR1' >> /var/lib/sec/cmd</i>, SEC will create a dump file 
 as if USR1 signal were received.
+
+<p>
+
+<a name="27">
+<b>Q27: How can I configure SEC to listen on TCP or UDP port 
+for input events?</b>
+<p>
+A: Use a dedicated tool such as nc or socat and start it from SEC with
+'spawn' or 'cspawn' action, in order to capture events sent to TCP or
+UDP port as synthetic events. For example, the following rule will
+start socat on port 10000/tcp when SEC is started or restarted, so that
+every line sent to port 10000/tcp will appear as a synthetic event with
+internal context TCP_SERVER:
+<p>
+type=Single
+<br>
+ptype=RegExp
+<br>
+pattern=^(SEC_STARTUP|SEC_RESTART)$
+<br>
+context=SEC_INTERNAL_EVENT
+<br>
+desc=start server on port 10000/tcp
+<br>
+action=cspawn TCP_SERVER /usr/bin/socat TCP-LISTEN:10000,fork,reuseaddr -
 
 <p>
 
