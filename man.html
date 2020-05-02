@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: June 2019<BR>
+Section: User Commands  (1)<BR>Updated: May 2020<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -119,6 +119,9 @@ sec - simple event correlator
 <BR>
 
 [--umask=&lt;mode&gt;]
+<BR>
+
+[--ruleperf | --noruleperf]
 <BR>
 
 [--dumpfts | --nodumpfts]
@@ -740,6 +743,16 @@ is a value from the range 0..0777 (see also
 
 Octal, decimal, hexadecimal, and binary values can be specified for &lt;mode&gt; 
 (e.g., octal mask 0027 can also be expressed as 23, 0x17, and 0b000010111).
+<DT><B>--ruleperf</B>, <B>--noruleperf</B>
+
+<DD>
+if the
+<B>--ruleperf</B>
+
+option is specified, performance data (e.g., total consumed CPU time)
+is collected for each rule and reported in dump file. Default is
+<B>--noruleperf</B>.
+
 <DT><B>--dumpfts</B>, <B>--nodumpfts</B>
 
 <DD>
@@ -7699,9 +7712,9 @@ code itself, user-defined Perl code is executed in the main::SEC namespace
 By using the main:: prefix, SEC data structures can be accessed and modified. 
 For example, the following rules restore and save contexts with names MY_*
 on SEC startup and shutdown, using Perl Storable module for saving and restoring
-relevant elements of %main::context_list hash (since code references can't be
-saved/restored with Storable, the following example assumes that context action 
-lists do not contain 
+relevant elements of %main::context_list hash (since the following example
+does not handle code references with Storable module, it is assumed that
+context action lists do not contain 
 <I>lcall </I>
 
 actions):
@@ -8589,10 +8602,9 @@ helped to develop SEC.
 <P>
 
 <HR>
-
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 14:13:52 GMT, June 02, 2019
+Time: 12:55:24 GMT, May 02, 2020
 </BODY>
 </HTML>
