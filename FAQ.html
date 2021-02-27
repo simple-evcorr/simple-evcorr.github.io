@@ -3,7 +3,7 @@
 <h2>Simple Event Correlator FAQ</h2>
 
 Author: Risto Vaarandi<br>
-Updated: November 11, 2020<p>
+Updated: February 27, 2021<p>
 
 <a href="#1">Q1</a>: How many sites are using SEC and how can I deploy it?<br>
 
@@ -69,7 +69,8 @@ How to report the name of the internal context for input source? <br>
   
 <a href="#22">Q22</a>: How can I parse events in JSON format? <br>
 
-<a href="#23">Q23</a>: How can I monitor log files in UTF16 format? <br>
+<a href="#23">Q23</a>: How can I write regular expression patterns for 
+recognizing letters and other character classes in encodings like UTF-8? <br>
   
 <a href="#24">Q24</a>: How can I monitor log files with names that 
 contain timestamps? <br>
@@ -1153,17 +1154,15 @@ https://github.com/simple-evcorr/rulesets/tree/master/parsing-json
 <p>
 
 <a name="23">
-<b>Q23: How can I monitor log files in UTF16 format?</b>
+<b>Q23: How can I write regular expression patterns for recognizing letters 
+and other character classes in encodings like UTF-8?</b>
 <p>
-A: Note that the following recipe is outdated and works only for Perl versions earlier than 5.30!
-<p>
-If SEC is started with PERL_UNICODE environment variable set to SAD (that actives UTF8 Perl IO layer for all
-input and output), it can process log file data in UTF8 format. Since there is no similar support for UTF16 in Perl,
-an external plugin is required for UTF16 log files which would convert UTF16 data to UTF8. Unfortunately,
-the command line <i>tail -c +1 -F logfile | iconv -f UTF16 -t UTF8</i>  would not work, since <i>iconv</i> tool
-buffers data in memory until <i>tail</i> closes the pipe. For a workaround, please have a look at an example
-UTF16 converter in SEC rule repository:
-https://github.com/simple-evcorr/rulesets/tree/master/utf16-logfiles
+A: For recognizing characters in various encodings like UTF-8 and iso-8859-1,
+use PerlFunc patterns for converting the input line from its native encoding
+into a format with Perl wide characters, and then apply regular expression
+against the line. For a more detailed example, please have a look at the
+UTF-8 related example in SEC rule repository:
+https://github.com/simple-evcorr/rulesets/tree/master/utf8
 
 <p>
 
