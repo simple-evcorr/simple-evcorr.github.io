@@ -1160,10 +1160,12 @@ and other character classes in encodings like UTF-8?</b>
 A: For recognizing characters in various encodings like UTF-8 and iso-8859-1,
 use PerlFunc patterns for converting the input line from its native encoding
 into a format with Perl wide characters, and then apply regular expression
-against the line. For a more detailed example, please have a look at the
+against the line. For a more detailed recipe, please have a look at the
 UTF-8 related example in SEC rule repository:
 https://github.com/simple-evcorr/rulesets/tree/master/utf8
-
+<p>
+Note: do not set PERL_UNICODE environment variable for UTF-8 processing
+with SEC, since this approach no longer works with recent Perl versions.
 <p>
 
 <a name="24">
