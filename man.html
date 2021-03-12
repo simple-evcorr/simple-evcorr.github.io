@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: May 2020<BR>
+Section: User Commands  (1)<BR>Updated: March 2021<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -34,7 +34,7 @@ Section: User Commands  (1)<BR>Updated: May 2020<BR>
 <DT><A HREF="#lbAX">EVENT CORRELATION OPERATIONS</A><DD>
 <DT><A HREF="#lbAY">INPUT PROCESSING AND TIMING</A><DD>
 <DT><A HREF="#lbAZ">INTERNAL EVENTS AND CONTEXTS</A><DD>
-<DT><A HREF="#lbBA">INTERPROCESS COMMUNICATION</A><DD>
+<DT><A HREF="#lbBA">CHILD PROCESSES</A><DD>
 <DT><A HREF="#lbBB">PERL INTEGRATION</A><DD>
 <DT><A HREF="#lbBC">EXAMPLES</A><DD>
 <DL>
@@ -770,7 +770,6 @@ if the
 <B>--dumpfjson</B>
 
 option is specified, dump file is produced in JSON format. 
-Note that this option requires the presence of Perl JSON module.
 Default is
 <B>--nodumpfjson</B>.
 
@@ -2365,7 +2364,7 @@ Apart from match variables, SEC supports
 in action lists which facilitate data sharing between actions and Perl 
 integration. Each action list variable has a name which must begin with 
 a letter and consist of letters, digits and underscores. Names of built-in 
-variables usually start with a punctuation mark (.), so that they can be 
+variables usually start with a dot character (.), so that they can be 
 distinguished from user defined variables. In order to refer 
 to an action list variable, its name must be prefixed by a percent sign (%). 
 Unlike match variables, action list variables can only be used in 
@@ -2506,6 +2505,10 @@ carriage return character.
 
 <DD>
 tabulation character.
+<DT><I>%.sp</I>
+
+<DD>
+space character.
 <DT><I>%.chr0, ..., %.chr31</I>
 
 <DD>
@@ -2839,14 +2842,16 @@ action.
 <DT><I>shellcmd &lt;cmdline&gt;</I>
 
 <DD>
-Fork a process for executing command line &lt;cmdline&gt;. If the
+Fork a process for executing command line &lt;cmdline&gt;. 
+If &lt;cmdline&gt; contains shell metacharacters, &lt;cmdline&gt; is parsed by shell. 
+If the
 <B>--quoting</B>
 
 option was specified and &lt;cmdline&gt; contains %s variables, the value of %s
 is quoted with single quotes before substituting it into &lt;cmdline&gt;; 
 if the value of %s contains single quotes, they are masked with backslashes
 (e.g., abc is converted to 'abc' and aa'bb is converted to 'aa'\''bb').
-For additional information, see INTERPROCESS COMMUNICATION section.
+For additional information, see CHILD PROCESSES section.
 For example, consider the following action list definition:
 <P>
 action=shellcmd (cat /tmp/report | mail root; rm -f /tmp/report); \
@@ -2908,10 +2913,70 @@ action, except that if the
 
 command line option is given, internal context &lt;name&gt; is set up for each 
 synthetic event. 
+<DT><I>cmdexec &lt;cmdline&gt;</I>
+
+<DD>
+Fork a process for executing command line &lt;cmdline&gt;. 
+Unlike
+<I>shellcmd</I>
+
+action, &lt;cmdline&gt; is not parsed by shell, but split into arguments by 
+using whitespace as a separator, and passed to 
+<B><A HREF="/cgi-bin/man/man2html?3+execvp">execvp</A></B>(3)
+
+for execution. Note that splitting into arguments is done when
+<I>cmdexec</I>
+
+action is loaded from the configuration file and parsed, not at runtime 
+(e.g., if &lt;cmdline&gt; is
+<I>/usr/local/bin/mytool $1 $2</I>,
+
+the values of $1 and $2 variables are regarded as single arguments even if
+the values contain whitespace).
+For additional information, see CHILD PROCESSES section.
+For example, consider the following action list definition:
+<P>
+action=cmdexec rm /tmp/report*
+<P>
+The above 
+<I>cmdexec</I>
+
+action will remove the file /tmp/report* without treating * as a file
+pattern character that matches any string.
+<DT><I>spawnexec &lt;cmdline&gt;</I>
+
+<DD>
+Similar to the
+<I>cmdexec</I>
+
+action, except that each line from the standard output of &lt;cmdline&gt;
+becomes a synthetic event and will be treated like a line from input file
+(see the
+<I>event</I>
+
+action for more information). If the
+<B>--intcontexts</B>
+
+command line option is given, internal context _INTERNAL_EVENT is set
+up before each synthetic event is processed (see INTERNAL EVENTS AND
+CONTEXTS section for more information).
+<DT><I>cspawnexec &lt;name&gt; &lt;cmdline&gt;</I>
+
+<DD>
+Similar to the
+<I>spawnexec</I>
+
+action, except that if the
+<B>--intcontexts</B>
+
+command line option is given, internal context &lt;name&gt; is set up for each 
+synthetic event. 
 <DT><I>pipe '[&lt;string&gt;]' [&lt;cmdline&gt;]</I>
 
 <DD>
-Fork a process for executing command line &lt;cmdline&gt;. The string &lt;string&gt; 
+Fork a process for executing command line &lt;cmdline&gt;. 
+If &lt;cmdline&gt; contains shell metacharacters, &lt;cmdline&gt; is parsed by shell. 
+The string &lt;string&gt; 
 with a terminating newline is written to the standard input of &lt;cmdline&gt; 
 (single quotes are used for disambiguating &lt;string&gt; from &lt;cmdline&gt;).
 If &lt;string&gt; contains semicolons, &lt;string&gt; must be enclosed in parentheses
@@ -2920,7 +2985,7 @@ If &lt;string&gt; contains semicolons, &lt;string&gt; must be enclosed in parent
 
 Default value for &lt;string&gt; is %s.
 If &lt;cmdline&gt; is omitted, &lt;string&gt; is written to standard output.
-For additional information, see INTERPROCESS COMMUNICATION section.
+For additional information, see CHILD PROCESSES section.
 For example, consider the following action list definition:
 <P>
 action=pipe 'Offending activities from host $1' /bin/mail <A HREF="mailto:root@localhost">root@localhost</A>
@@ -2934,6 +2999,45 @@ to the standard input of the
 
 command which sends this line to <A HREF="mailto:root@localhost">root@localhost</A> via e-mail
 (&lt;hostname&gt; is the value of the $1 match variable). 
+<DT><I>pipeexec '[&lt;string&gt;]' [&lt;cmdline&gt;]</I>
+
+<DD>
+Similar to the
+<I>pipe</I>
+
+action, except &lt;cmdline&gt; is not parsed by shell, but split into arguments by
+using whitespace as a separator, and passed to 
+<B><A HREF="/cgi-bin/man/man2html?3+execvp">execvp</A></B>(3)
+
+for execution. Note that splitting into arguments is done when
+<I>pipeexec</I>
+
+action is loaded from the configuration file and parsed, not at runtime 
+(e.g., if &lt;cmdline&gt; is
+<I>/usr/local/bin/mytool $1 $2</I>,
+
+the values of $1 and $2 variables are regarded as single arguments even if
+the values contain whitespace).
+For example, consider the following action list definition:
+<P>
+action=pipeexec 'Offending activities from host $1' \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/bin/mail&nbsp;-s&nbsp;SEC%{.sp}alert&nbsp;$2
+<P>
+The above
+<I>pipeexec</I>
+
+action writes the line &quot;Offending activities from host &lt;hostname&gt;&quot;
+to the standard input of the
+<I>/bin/mail -s &lt;subject&gt; &lt;user&gt;</I>
+
+command which sends this line to &lt;user&gt; via e-mail with subject &lt;subject&gt;
+(&lt;hostname&gt; is the value of the $1 match variable, while &lt;user&gt; is the value
+of the $2 match variable). Note that since &lt;subject&gt; is defined as
+SEC%{.sp}alert and does not contain whitespace, it is treated as a single
+argument for the -s flag of the /bin/mail command. However, since &lt;subject&gt;
+contains the %.sp action list variable, the string &quot;SEC alert&quot; will be used
+for the e-mail subject at runtime. Also, if the value of the $2 match variable 
+contains shell metacharacters, they will not be interpreted by the shell.
 <DT><I>create [&lt;name&gt; [&lt;time&gt; [&lt;action list&gt;] ] ]</I>
 
 <DD>
@@ -3094,15 +3198,17 @@ before &lt;string&gt; is added.
 <DT><I>report &lt;name&gt; [&lt;cmdline&gt;]</I>
 
 <DD>
-Fork a process for executing command line &lt;cmdline&gt;, and write strings from
-the event store of the context &lt;name&gt; to the standard input of &lt;cmdline&gt;.
+Fork a process for executing command line &lt;cmdline&gt;. 
+If &lt;cmdline&gt; contains shell metacharacters, &lt;cmdline&gt; is parsed by shell. 
+Also, write strings from the event store of the context &lt;name&gt; to the standard 
+input of &lt;cmdline&gt;.
 Strings are written in the order they appear in the event store, with
 a terminating newline appended to each string.
 If the context &lt;name&gt; does not exist or its event store is empty, &lt;cmdline&gt;
 is not executed.
 The &lt;name&gt; parameter may not contain whitespace, and if &lt;cmdline&gt; is omitted,
 strings are written to standard output.
-For additional information, see INTERPROCESS COMMUNICATION section.
+For additional information, see CHILD PROCESSES section.
 For example, consider the following action list definition:
 <P>
 action=create PID_$1 60 ( report PID_$1 /bin/mail <A HREF="mailto:root@localhost">root@localhost</A> ); \
@@ -3113,6 +3219,25 @@ of 60 seconds and sets the first string in the context event store to
 &quot;Beginning of the report&quot; (&lt;suffix&gt; is the value of the $1 match variable).
 When the context expires, all strings from the event store will be mailed
 to <A HREF="mailto:root@localhost">root@localhost</A>.
+<DT><I>reportexec &lt;name&gt; [&lt;cmdline&gt;]</I>
+
+<DD>
+Similar to the
+<I>report</I>
+
+action, except &lt;cmdline&gt; is not parsed by shell, but split into arguments by
+using whitespace as a separator, and passed to 
+<B><A HREF="/cgi-bin/man/man2html?3+execvp">execvp</A></B>(3)
+
+for execution. Note that splitting into arguments is done when
+<I>reportexec</I>
+
+action is loaded from the configuration file and parsed, not at runtime 
+(e.g., if &lt;cmdline&gt; is
+<I>/usr/local/bin/mytool $1 $2</I>,
+
+the values of $1 and $2 variables are regarded as single arguments even if
+the values contain whitespace).
 <DT><I>copy &lt;name&gt; %&lt;var&gt;</I>
 
 <DD>
@@ -3370,7 +3495,7 @@ abc'123'xyz, the action
 <I>assignsq %myvar $1</I>
 
 assigns the value 'abc'\''123'\''xyz' to the action list variable %myvar).
-This action is useful for disabling shell intepretation 
+This action is useful for disabling shell interpretation 
 for the values of action list variables that appear in command lines executed 
 by SEC.
 Default value for &lt;string&gt; is %s.
@@ -3770,15 +3895,16 @@ This section provides a detailed discussion of SEC rule types.
 <A NAME="lbAL">&nbsp;</A>
 <H3>SINGLE RULE</H3>
 
-The
-<B>Single</B>
+The Single rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule immediately executes an action list when an event has matched the rule.
-An event matches the rule if the pattern matches the event and the context
-expression (if given) evaluates TRUE.
-<P>
+<I>desc</I>,
 
-The Single rule supports the following fields:
+and
+<I>action</I>
+
+fields.
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -3821,16 +3947,16 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>Single</B>
 
-<I>desc</I>,
+rule immediately executes an action list when an event has matched the rule.
+An event matches the rule if the pattern matches the event and the context
+expression (if given) evaluates TRUE.
+<P>
 
-and
-<I>action</I>
-
-fields.
-Also note that this rule does not start an event correlation operation, and the
+Note that the Single rule does not start event correlation operations, 
+and the
 <I>desc</I>
 
 field is merely used for setting the %s action list variable.
@@ -3931,25 +4057,20 @@ third rule.
 <A NAME="lbAM">&nbsp;</A>
 <H3>SINGLEWITHSCRIPT RULE</H3>
 
-The
-<B>SingleWithScript</B>
+The SingleWithScript rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule forks a process for executing an external program when an event has 
-matched the rule. 
-The names of all currently existing contexts are written to the standard
-input of the program.
-After the program has been forked, the rule matching continues immediately, 
-and the program status will be checked periodically until the program exits.
-If the program returns 0 exit status, the action list defined by the
-<I>action</I>
+<I>script</I>,
 
-field is executed; otherwise the action list defined by the
+<I>desc</I>,
+
+<I>action</I>,
+
+and
 <I>action2</I>
 
-field is executed (if given).
-<P>
-
-The SingleWithScript rule supports the following fields:
+fields. 
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -3979,7 +4100,11 @@ context expression.
 <DT><I>script</I>
 
 <DD>
-an external program.
+command line of external program.
+<DT><I>shell</I> (optional)
+
+<DD>
+Yes or No (values are case insensitive, default is Yes).
 <DT><I>desc</I>
 
 <DD>
@@ -3999,20 +4124,54 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>SingleWithScript</B>
 
-<I>script</I>,
+rule forks a process for executing an external program when an event has 
+matched the rule. 
+The command line of the external program is defined by the
+<I>script</I>
 
-<I>desc</I>,
+field.
+<P>
 
-<I>action</I>,
+If the
+<I>shell</I>
 
-and
+field is set to Yes (this is the default), the command line of the external
+program will be parsed by shell if the command line contains shell 
+metacharacters.
+If the
+<I>shell</I>
+
+field is set to No, command line is not parsed by shell, but split into 
+arguments by using whitespace as a separator, and passed to 
+<B><A HREF="/cgi-bin/man/man2html?3+execvp">execvp</A></B>(3)
+
+for execution. Note that splitting into arguments is done when command
+line is loaded from the configuration file and parsed, not at runtime
+(e.g., if command line is
+<I>/usr/local/bin/mytool $1 $2</I>,
+
+the values of $1 and $2 variables are regarded as single arguments even if
+the values contain whitespace).
+<P>
+
+The names of all currently existing contexts are written to the standard
+input of the program.
+After the program has been forked, the rule matching continues immediately, 
+and the program status will be checked periodically until the program exits.
+If the program returns 0 exit status, the action list defined by the
+<I>action</I>
+
+field is executed; otherwise the action list defined by the
 <I>action2</I>
 
-fields. 
-Also note that this rule does not start an event correlation operation, and the
+field is executed (if given).
+<P>
+
+Note that the SingleWithScript rule does not start event correlation 
+operations, and the
 <I>desc</I>
 
 field is merely used for setting the %s action list variable.
@@ -4051,27 +4210,16 @@ an e-mail warning containing a human-readable timestamp is sent to
 <A NAME="lbAN">&nbsp;</A>
 <H3>SINGLEWITHSUPPRESS RULE</H3>
 
-The
-<B>SingleWithSuppress</B>
+The SingleWithSuppress rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule runs event correlation operations for filtering repeated instances of
-the same event during T seconds. The value of T is defined by the
-<I>window</I>
+<I>desc</I>,
 
-field.
-<P>
+and
+<I>action</I>
 
-When an event has matched the rule, SEC evaluates the operation description 
-string given with the
-<I>desc</I>
-
-field. If the operation for the given string and rule does not exist, 
-SEC will create it with the lifetime of T seconds, and the operation 
-immediately executes an action list. If the operation exists, it consumes 
-the matching event without any action. 
-<P>
-
-The SingleWithSuppress rule supports the following fields:
+fields.
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -4117,15 +4265,24 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>SingleWithSuppress</B>
 
-<I>desc</I>,
+rule runs event correlation operations for filtering repeated instances of
+the same event during T seconds. The value of T is defined by the
+<I>window</I>
 
-and
-<I>action</I>
+field.
+<P>
 
-fields.
+When an event has matched the rule, SEC evaluates the operation description 
+string given with the
+<I>desc</I>
+
+field. If the operation for the given string and rule does not exist, 
+SEC will create it with the lifetime of T seconds, and the operation 
+immediately executes an action list. If the operation exists, it consumes 
+the matching event without any action. 
 <P>
 
 <B>Examples:</B>
@@ -4171,57 +4328,16 @@ field contains the $1 match variable which evaluates to the file system name).
 <A NAME="lbAO">&nbsp;</A>
 <H3>PAIR RULE</H3>
 
-The
-<B>Pair</B>
+The Pair rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule runs event correlation operations for processing event pairs 
-during T seconds. The value of T is defined by the
-<I>window</I>
+<I>desc</I>,
 
-field. Default value is 0 which means infinity.
-<P>
+<I>action</I>,
 
-When an event has matched the conditions defined by the
-<I>pattern</I>
+<I>pattern2</I>,
 
-and
-<I>context</I>
-
-field, SEC evaluates the operation description string given with the
-<I>desc</I>
-
-field. 
-If the operation for the given string and rule exists, it consumes 
-the matching event without any action. If the operation does not exist, 
-SEC will create it with the lifetime of T seconds, and the operation 
-immediately executes an action list defined by the
-<I>action</I>
-
-field. SEC will also copy the match conditions given with the 
-<I>pattern2</I>
-
-and
-<I>context2</I>
-
-field into the operation, and substitute match variables with their values 
-in copied conditions. 
-<P>
-
-If the event does not match conditions defined by the
-<I>pattern</I>
-
-and
-<I>context</I>
-
-field, SEC will check the match conditions of all operations started by 
-the given rule. Each matching operation executes the action list given with the
-<I>action2</I>
-
-field and finishes. 
-<P>
-
-If match variables are set when the operation matches an event, they are
-made available as $-prefixed match variables in
 <I>context2</I>,
 
 <I>desc2</I>,
@@ -4229,45 +4345,7 @@ made available as $-prefixed match variables in
 and
 <I>action2</I>
 
-fields of the rule definition. For example, if 
-<I>pattern2</I>
-
-field is a regular expression, then $1 in the
-<I>desc2</I>
-
-field is set by
-<I>pattern2</I>.
-
-In order to access match variables set by 
-<I>pattern</I>,
-
-%-prefixed match variables have to be used in
-<I>context2</I>,
-
-<I>desc2</I>,
-
-and
-<I>action2</I>
-
-fields. For example, if 
-<I>pattern</I>
-
-and
-<I>pattern2</I>
-
-are regular expressions, then %1 in the
-<I>desc2</I>
-
-field refers to the value set by the first capture group in
-<I>pattern</I>
-
-(i.e., it has the same value as $1 in the
-<I>desc</I>
-
-field).
-<P>
-
-The Pair rule supports the following fields:
+fields. 
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -4368,15 +4446,57 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>Pair</B>
 
-<I>desc</I>,
+rule runs event correlation operations for processing event pairs 
+during T seconds. The value of T is defined by the
+<I>window</I>
 
-<I>action</I>,
+field. Default value is 0 which means infinity.
+<P>
 
-<I>pattern2</I>,
+When an event has matched the conditions defined by the
+<I>pattern</I>
 
+and
+<I>context</I>
+
+field, SEC evaluates the operation description string given with the
+<I>desc</I>
+
+field. 
+If the operation for the given string and rule exists, it consumes 
+the matching event without any action. If the operation does not exist, 
+SEC will create it with the lifetime of T seconds, and the operation 
+immediately executes an action list defined by the
+<I>action</I>
+
+field. SEC will also copy the match conditions given with the 
+<I>pattern2</I>
+
+and
+<I>context2</I>
+
+field into the operation, and substitute match variables with their values 
+in copied conditions. 
+<P>
+
+If the event does not match conditions defined by the
+<I>pattern</I>
+
+and
+<I>context</I>
+
+field, SEC will check the match conditions of all operations started by 
+the given rule. Each matching operation executes the action list given with the
+<I>action2</I>
+
+field and finishes. 
+<P>
+
+If match variables are set when the operation matches an event, they are
+made available as $-prefixed match variables in
 <I>context2</I>,
 
 <I>desc2</I>,
@@ -4384,7 +4504,42 @@ Note that match variables may be used in
 and
 <I>action2</I>
 
-fields. 
+fields of the rule definition. For example, if 
+<I>pattern2</I>
+
+field is a regular expression, then $1 in the
+<I>desc2</I>
+
+field is set by
+<I>pattern2</I>.
+
+In order to access match variables set by 
+<I>pattern</I>,
+
+%-prefixed match variables have to be used in
+<I>context2</I>,
+
+<I>desc2</I>,
+
+and
+<I>action2</I>
+
+fields. For example, if 
+<I>pattern</I>
+
+and
+<I>pattern2</I>
+
+are regular expressions, then %1 in the
+<I>desc2</I>
+
+field refers to the value set by the first capture group in
+<I>pattern</I>
+
+(i.e., it has the same value as $1 in the
+<I>desc</I>
+
+field).
 <P>
 
 <B>Examples:</B>
@@ -4571,59 +4726,16 @@ immediately.
 <A NAME="lbAP">&nbsp;</A>
 <H3>PAIRWITHWINDOW RULE</H3>
 
-The
-<B>PairWithWindow</B>
+The PairWithWindow rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule runs event correlation operations for processing event pairs
-during T seconds. The value of T is defined by the
-<I>window</I>
+<I>desc</I>,
 
-field.
-<P>
+<I>action</I>,
 
-When an event has matched the conditions defined by the
-<I>pattern</I>
+<I>pattern2</I>,
 
-and
-<I>context</I>
-
-field, SEC evaluates the operation description string given with the
-<I>desc</I>
-
-field. 
-If the operation for the given string and rule exists, it consumes 
-the matching event without any action. If the operation does not exist, 
-SEC will create it with the lifetime of T seconds. 
-SEC will also copy the match conditions given with the 
-<I>pattern2</I>
-
-and
-<I>context2</I>
-
-field into the operation, and substitute match variables with their values 
-in copied conditions. 
-<P>
-
-If the event does not match conditions defined by the
-<I>pattern</I>
-
-and
-<I>context</I>
-
-field, SEC will check the match conditions of all operations started by 
-the given rule. Each matching operation executes the action list given with the
-<I>action2</I>
-
-field and finishes. 
-If the operation has not observed a matching event by the end of its lifetime,
-it executes the action list given with the 
-<I>action</I>
-
-field before finishing.
-<P>
-
-If match variables are set when the operation matches an event, they are
-made available as $-prefixed match variables in
 <I>context2</I>,
 
 <I>desc2</I>,
@@ -4631,45 +4743,7 @@ made available as $-prefixed match variables in
 and
 <I>action2</I>
 
-fields of the rule definition. For example, if 
-<I>pattern2</I>
-
-field is a regular expression, then $1 in the
-<I>desc2</I>
-
-field is set by 
-<I>pattern2</I>.
-
-In order to access match variables set by 
-<I>pattern</I>,
-
-%-prefixed match variables have to be used in
-<I>context2</I>,
-
-<I>desc2</I>,
-
-and
-<I>action2</I>
-
-fields. For example, if 
-<I>pattern</I>
-
-and
-<I>pattern2</I>
-
-are regular expressions, then %1 in the
-<I>desc2</I>
-
-field refers to the value set by the first capture group in
-<I>pattern</I>
-
-(i.e., it has the same value as $1 in the
-<I>desc</I>
-
-field).
-<P>
-
-The PairWithWindow rule supports the following fields:
+fields. 
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -4770,15 +4844,59 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>PairWithWindow</B>
 
-<I>desc</I>,
+rule runs event correlation operations for processing event pairs
+during T seconds. The value of T is defined by the
+<I>window</I>
 
-<I>action</I>,
+field.
+<P>
 
-<I>pattern2</I>,
+When an event has matched the conditions defined by the
+<I>pattern</I>
 
+and
+<I>context</I>
+
+field, SEC evaluates the operation description string given with the
+<I>desc</I>
+
+field. 
+If the operation for the given string and rule exists, it consumes 
+the matching event without any action. If the operation does not exist, 
+SEC will create it with the lifetime of T seconds. 
+SEC will also copy the match conditions given with the 
+<I>pattern2</I>
+
+and
+<I>context2</I>
+
+field into the operation, and substitute match variables with their values 
+in copied conditions. 
+<P>
+
+If the event does not match conditions defined by the
+<I>pattern</I>
+
+and
+<I>context</I>
+
+field, SEC will check the match conditions of all operations started by 
+the given rule. Each matching operation executes the action list given with the
+<I>action2</I>
+
+field and finishes. 
+If the operation has not observed a matching event by the end of its lifetime,
+it executes the action list given with the 
+<I>action</I>
+
+field before finishing.
+<P>
+
+If match variables are set when the operation matches an event, they are
+made available as $-prefixed match variables in
 <I>context2</I>,
 
 <I>desc2</I>,
@@ -4786,7 +4904,42 @@ Note that match variables may be used in
 and
 <I>action2</I>
 
-fields. 
+fields of the rule definition. For example, if 
+<I>pattern2</I>
+
+field is a regular expression, then $1 in the
+<I>desc2</I>
+
+field is set by 
+<I>pattern2</I>.
+
+In order to access match variables set by 
+<I>pattern</I>,
+
+%-prefixed match variables have to be used in
+<I>context2</I>,
+
+<I>desc2</I>,
+
+and
+<I>action2</I>
+
+fields. For example, if 
+<I>pattern</I>
+
+and
+<I>pattern2</I>
+
+are regular expressions, then %1 in the
+<I>desc2</I>
+
+field refers to the value set by the first capture group in
+<I>pattern</I>
+
+(i.e., it has the same value as $1 in the
+<I>desc</I>
+
+field).
 <P>
 
 <B>Examples:</B>
@@ -4924,51 +5077,18 @@ field, in order to refer to the original values of $1 (root) and $2
 <A NAME="lbAQ">&nbsp;</A>
 <H3>SINGLEWITHTHRESHOLD RULE</H3>
 
-The
-<B>SingleWithThreshold</B>
+The SingleWithThreshold rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule runs event correlation operations for counting repeated instances of the
-same event during T seconds, and taking an action if N events are observed. 
-The values of T and N are defined by the
-<I>window</I>
+<I>desc</I>,
+
+<I>action</I>,
 
 and
-<I>thresh</I>
-
-field, respectively.
-<P>
-
-When an event has matched the rule, SEC evaluates the operation description 
-string given with the 
-<I>desc </I>
-
-field. If the operation for the given string and rule does not exist, 
-SEC will create it with the lifetime of T seconds. The operation will 
-memorize the occurrence time of the event (current time as returned by the
-<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
-
-system call), and compare the number of memorized occurrence times with 
-the threshold N. If the operation has observed N events, it executes the
-action list defined by the
-<I>action</I>
-
-field, and consumes all further matching events without any action. If the
-rule has an optional action list defined with the
 <I>action2</I>
 
-field, the operation will execute it before finishing, provided that the
-action list given with
-<I>action</I>
-
-has been previously executed by the operation. Note that  a sliding 
-window is employed for event counting -- if the operation has observed 
-less than N events by the end of its lifetime, it drops occurrence times which
-are older than T seconds, and extends its lifetime for T seconds from the
-earliest remaining occurrence time. If there are no remaining occurrence
-times, the operation finishes without executing an action list. 
-<P>
-
-The SingleWithThreshold rule supports the following fields:
+fields.
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -5022,17 +5142,48 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>SingleWithThreshold</B>
 
-<I>desc</I>,
-
-<I>action</I>,
+rule runs event correlation operations for counting repeated instances of the
+same event during T seconds, and taking an action if N events are observed. 
+The values of T and N are defined by the
+<I>window</I>
 
 and
+<I>thresh</I>
+
+field, respectively.
+<P>
+
+When an event has matched the rule, SEC evaluates the operation description 
+string given with the 
+<I>desc </I>
+
+field. If the operation for the given string and rule does not exist, 
+SEC will create it with the lifetime of T seconds. The operation will 
+memorize the occurrence time of the event (current time as returned by the
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
+
+system call), and compare the number of memorized occurrence times with 
+the threshold N. If the operation has observed N events, it executes the
+action list defined by the
+<I>action</I>
+
+field, and consumes all further matching events without any action. If the
+rule has an optional action list defined with the
 <I>action2</I>
 
-fields.
+field, the operation will execute it before finishing, provided that the
+action list given with
+<I>action</I>
+
+has been previously executed by the operation. Note that  a sliding 
+window is employed for event counting -- if the operation has observed 
+less than N events by the end of its lifetime, it drops occurrence times which
+are older than T seconds, and extends its lifetime for T seconds from the
+earliest remaining occurrence time. If there are no remaining occurrence
+times, the operation finishes without executing an action list. 
 <P>
 
 <B>Examples:</B>
@@ -5108,51 +5259,20 @@ the second operation will exist until 01:45:00 without taking any action.
 <A NAME="lbAR">&nbsp;</A>
 <H3>SINGLEWITH2THRESHOLDS RULE</H3>
 
-The
-<B>SingleWith2Thresholds</B>
+The SingleWith2Thresholds rule supports the following fields.
+Note that match variables may be used in
+<I>context</I>,
 
-rule runs event correlation operations which take action if N1 events have 
-been observed in the window of T1 seconds, and then at most N2 events will
-be observed in the window of T2 seconds. 
-The values of T1, N1, T2, and N2 are defined by the
-<I>window</I>,
+<I>desc</I>,
 
-<I>thresh</I>,
+<I>action</I>,
 
-<I>window2</I>,
+<I>desc2</I>,
 
 and
-<I>thresh2</I>
-
-field, respectively.
-<P>
-
-When an event has matched the rule, SEC evaluates the operation description 
-string given with the 
-<I>desc </I>
-
-field. If the operation for the given string and rule does not exist, 
-SEC will create it with the lifetime of T1 seconds. The operation will 
-memorize the occurrence time of the event (current time as returned by the
-<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
-
-system call), and compare the number of memorized occurrence times with 
-the threshold N1. If the operation has observed N1 events, it executes the
-action list defined by the
-<I>action</I>
-
-field, and starts another counting round for T2 seconds.
-If no more than N2 events have been observed by the end of the window, 
-the operation executes the action list defined by the
 <I>action2</I>
 
-field and finishes. Note that both windows are sliding -- the first window
-slides like the window of the SingleWithThreshold operation, while the 
-beginning of the second window is moved to the second earliest memorized
-event occurrence time when the threshold N2 is violated.
-<P>
-
-The SingleWith2Thresholds rule supports the following fields:
+fields.
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -5220,19 +5340,48 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context</I>,
+The
+<B>SingleWith2Thresholds</B>
 
-<I>desc</I>,
+rule runs event correlation operations which take action if N1 events have 
+been observed in the window of T1 seconds, and then at most N2 events will
+be observed in the window of T2 seconds. 
+The values of T1, N1, T2, and N2 are defined by the
+<I>window</I>,
 
-<I>action</I>,
+<I>thresh</I>,
 
-<I>desc2</I>,
+<I>window2</I>,
 
 and
+<I>thresh2</I>
+
+field, respectively.
+<P>
+
+When an event has matched the rule, SEC evaluates the operation description 
+string given with the 
+<I>desc </I>
+
+field. If the operation for the given string and rule does not exist, 
+SEC will create it with the lifetime of T1 seconds. The operation will 
+memorize the occurrence time of the event (current time as returned by the
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
+
+system call), and compare the number of memorized occurrence times with 
+the threshold N1. If the operation has observed N1 events, it executes the
+action list defined by the
+<I>action</I>
+
+field, and starts another counting round for T2 seconds.
+If no more than N2 events have been observed by the end of the window, 
+the operation executes the action list defined by the
 <I>action2</I>
 
-fields.
+field and finishes. Note that both windows are sliding -- the first window
+slides like the window of the SingleWithThreshold operation, while the 
+beginning of the second window is moved to the second earliest memorized
+event occurrence time when the threshold N2 is violated.
 <P>
 
 <B>Examples:</B>
@@ -5329,140 +5478,24 @@ the operation will run until 13:28:53 and then expire, logging the message
 <A NAME="lbAS">&nbsp;</A>
 <H3>EVENTGROUP RULE</H3>
 
-The
-<B>EventGroup</B>
+The EventGroup rule supports the following fields.
+Note that match variables may be used in
+<I>context*</I>,
 
-rule runs event correlation operations for counting repeated instances of
-N different events e1,...,eN during T seconds, and taking an action if 
-threshold conditions c1,...,cN for *all* events are satisfied (i.e., for 
-each event eK there are at least cK event instances in the window).
-Note that the event correlation window of the EventGroup operation 
-is sliding like the window of the SingleWithThreshold operation.
-<P>
+<I>count*</I>,
 
-Event e1 is described with the 
-<I>pattern</I>
+<I>desc</I>,
 
-and
-<I>context</I>
+<I>action</I>,
 
-field, event e2 is described with the
-<I>pattern2</I>
+<I>init</I>,
+
+<I>end</I>,
 
 and
-<I>context2</I>
-
-field, etc.
-The values for N and T are defined by the
-<I>type</I>
-
-and 
-<I>window</I>
-
-field, respectively. The value for c1 is given with the 
-<I>thresh</I>
-
-field, the value for c2 is given with the
-<I>thresh2</I>
-
-field, etc. 
-Values for N and c1,...,cN default to 1. 
-<P>
-
-In order to match an event with the rule, 
-<I>pattern</I>
-
-and
-<I>context</I>
-
-fields are evaluated first. If they don't match the event, then
-<I>pattern2</I>
-
-and
-<I>context2</I>
-
-are evaluated, etc. If all N conditions are tried without a success,
-the event doesn't match the rule.
-<P>
-
-When an event has matched the rule, SEC evaluates the operation description 
-string given with the 
-<I>desc </I>
-
-field. If the operation for the given string and rule does not exist, 
-SEC will create it with the lifetime of T seconds. The operation will 
-memorize the occurrence time of the event (current time as returned by the
-<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
-
-system call), and compare the number of memorized occurrence times for each
-eK with the threshold cK (i.e., the number of observed instances of eK is 
-compared with the threshold cK).
-If all threshold confitions are satisfied, the operation executes the
-action list defined by the
-<I>action</I>
-
-field, and consumes all further matching events without re-executing
-the action list if the
-<I>multact</I>
-
-field is set to No (this is the default). 
-However, if
-<I>multact</I>
-
-is set to Yes, the operation will re-evaluate the threshold conditions on 
-every further matching event, re-executing the action list given with the
-<I>action</I>
-
-field if all conditions are satisfied, and sliding the event correlation 
-window forward when the window is about to expire (if no events remain in
-the window, the operation will finish).
-<P>
-
-If the rule definition has an optional action list defined with the
-<I>countK</I>
-
-field for event eK, the operation executes it every time an instance of eK 
-is observed (even if
-<I>multact</I>
-
-is set to No and the operation has already executed the action list given
-with
-<I>action</I>).
-
-If the action list contains match variables, they are substituted before
-*each* execution with values from matching the current instance of eK.
-<P>
-
-If the rule definition has an optional action list defined with the
-<I>init</I>
-
-field, the operation executes it immediately after the operation has been
-created. 
-<P>
-
-If the rule definition has an optional action list defined with the
-<I>end</I>
-
-field, the operation executes it immediately before the operation finishes.
-Note that this action list is *not* executed when the operation is
-terminated with the
-<I>reset</I>
-
-action.
-<P>
-
-If the rule definition has an optional action list defined with the
 <I>slide</I>
 
-field, the operation executes it immediately after the event correlation 
-window has slidden forward.
-However, note that moving the window with the
-<I>setwpos</I>
-
-action will *not* trigger the execution.
-<P>
-
-The EventGroup rule supports the following fields:
+fields.
 <DL COMPACT>
 <DT><I>type </I>
 
@@ -5601,6 +5634,18 @@ action list.
 
 <DD>
 Yes or No (values are case insensitive, default is No).
+<DT><I>egptype</I> (optional)
+
+<DD>
+SubStr, NSubStr, RegExp, NRegExp, PerlFunc or NPerlFunc
+(values are case insensitive).
+Specifies the pattern type for
+<I>egpattern</I>.
+
+<DT><I>egpattern</I> (optional)
+
+<DD>
+event group pattern.
 <DT><I>window</I>
 
 <DD>
@@ -5612,23 +5657,406 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in
-<I>context*</I>,
+The
+<B>EventGroup</B>
 
-<I>count*</I>,
+rule runs event correlation operations for counting repeated instances of
+N different events e1,...,eN during T seconds, and taking an action if 
+threshold conditions c1,...,cN for *all* events are satisfied (i.e., for 
+each event eK there are at least cK event instances in the window).
+Note that the event correlation window of the EventGroup operation 
+is sliding like the window of the SingleWithThreshold operation.
+<P>
 
-<I>desc</I>,
-
-<I>action</I>,
-
-<I>init</I>,
-
-<I>end</I>,
+Event e1 is described with the 
+<I>pattern</I>
 
 and
+<I>context</I>
+
+field, event e2 is described with the
+<I>pattern2</I>
+
+and
+<I>context2</I>
+
+field, etc.
+The values for N and T are defined by the
+<I>type</I>
+
+and 
+<I>window</I>
+
+field, respectively. The value for c1 is given with the 
+<I>thresh</I>
+
+field, the value for c2 is given with the
+<I>thresh2</I>
+
+field, etc. 
+Values for N and c1,...,cN default to 1. 
+<P>
+
+In order to match an event with the rule, 
+<I>pattern</I>
+
+and
+<I>context</I>
+
+fields are evaluated first. If they don't match the event, then
+<I>pattern2</I>
+
+and
+<I>context2</I>
+
+are evaluated, etc. If all N conditions are tried without a success,
+the event doesn't match the rule.
+<P>
+
+When an event has matched the rule, SEC evaluates the operation description 
+string given with the 
+<I>desc </I>
+
+field. If the operation for the given string and rule does not exist, 
+SEC will create it with the lifetime of T seconds. The operation will 
+memorize the occurrence time of the event (current time as returned by the
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
+
+system call), and compare the number of memorized occurrence times for each
+eK with the threshold cK (i.e., the number of observed instances of eK is 
+compared with the threshold cK).
+If all threshold conditions are satisfied, the operation executes the
+action list defined by the
+<I>action</I>
+
+field, and consumes all further matching events without re-executing
+the action list if the
+<I>multact</I>
+
+field is set to No (this is the default). 
+However, if
+<I>multact</I>
+
+is set to Yes, the operation will re-evaluate the threshold conditions on 
+every further matching event, re-executing the action list given with the
+<I>action</I>
+
+field if all conditions are satisfied, and sliding the event correlation 
+window forward when the window is about to expire (if no events remain in
+the window, the operation will finish).
+<P>
+
+For example, consider the following rule:
+<P>
+
+type=EventGroup2
+<BR>
+
+ptype=SubStr
+<BR>
+
+pattern=EVENT_A
+<BR>
+
+thresh=2
+<BR>
+
+ptype2=SubStr
+<BR>
+
+pattern2=EVENT_B
+<BR>
+
+thresh2=2
+<BR>
+
+desc=Sequence of two or more As and Bs observed within 60 seconds
+<BR>
+
+action=write - %s
+<BR>
+
+window=60
+<P>
+
+Also, suppose the following events occur, and each event timestamp reflects 
+the time SEC observes the event: 
+<P>
+
+Mar 10 12:03:01 EVENT_A
+<BR>
+
+Mar 10 12:03:04 EVENT_B
+<BR>
+
+Mar 10 12:03:10 EVENT_A
+<BR>
+
+Mar 10 12:03:11 EVENT_A
+<BR>
+
+Mar 10 12:03:27 EVENT_B
+<BR>
+
+Mar 10 12:03:46 EVENT_A
+<BR>
+
+Mar 10 12:03:59 EVENT_A
+<P>
+
+When these events are observed by the above EventGroup2 rule, the rule
+starts an event correlation operation at 12:03:01. Note that although
+the first threshold condition 
+<I>thresh=2 </I>
+
+is satisfied when the third
+event appears at 12:03:10, the second threshold condition 
+<I>thresh2=2</I>
+
+is not met, and therefore the operation will not execute the action list
+given with the 
+<I>action</I>
+
+field.
+When the fifth event appears at 12:03:27, all threshold conditions are
+finally satisfied, and the operation will write the string
+&quot;Sequence of two or more As and Bs observed within 60 seconds&quot;
+to standard output with the
+<I>write</I>
+
+action. Finally, the events occurring at 12:03:46 and 12:03:59
+will be consumed silently by the operation (the operation will run until
+12:04:01).
+<P>
+
+If
+<I>multact=yes</I>
+
+statement is added to the above EventGroup2 rule, the operation would
+execute the 
+<I>write</I>
+
+action not only at 12:03:27, but also at 12:03:46 and 12:03:59, since
+all threshold conditions are still satisfied when the last two events appear
+(i.e., the last two events are no longer silently consumed). Also, with
+<I>multact=yes</I>
+
+the operation will employ sliding window based event processing even after 
+the 
+<I>write</I>
+
+action has been executed at 12:03:27 (therefore, the operation will run 
+until 12:04:59).
+<P>
+
+If the rule definition has an optional event group pattern and its type
+defined with the
+<I>egpattern</I>
+
+and
+<I>egptype</I>
+
+fields, the event group pattern is used for matching the event group string.
+The event group string consists of positive integers Xi that are separated 
+by a single space character:
+&quot;X1 X2 ... XM&quot;. 
+M is the number of events a given event correlation operation has observed 
+within its event correlation window. Also, if the i-th event that the event
+correlation operation has observed is an instance of event eK, then Xi = K.
+Event group string is built and matched with event group pattern after all
+threshold conditions (given with
+<I>thresh*</I>
+
+fields) have been found satisfied. 
+In other words, the event group pattern defines an additional condition 
+to numeric threshold conditions. 
+<P>
+
+Note that the event group pattern
+and its type are similar to regular patterns and pattern types that are 
+given with
+<I>pattern*</I>
+
+and
+<I>ptype*</I>
+
+fields, except the event group pattern is not setting any match variables. 
+If the
+<I>egptype</I>
+
+field is set to RegExp or NRegExp, the
+<I>egpattern </I>
+
+field defines a regular expression, while in the case of SubStr and NSubStr
+<I>egpattern</I>
+
+provides a string pattern.
+If the
+<I>egptype</I>
+
+field is set to PerlFunc or NPerlFunc, event group string is the only
+parameter for the Perl function given with the
+<I>egpattern</I>
+
+field, and the function is called in the Perl scalar context. 
+With 
+<I>egptype=PerlFunc</I>,
+
+event group pattern matches if the return value of the function evaluates 
+true in the Perl boolean context, while in the case of false the pattern 
+does not match the event group string.
+With 
+<I>egptype=NPerlFunc</I>,
+
+the pattern matching works in the opposite way.
+<P>
+
+For example, consider the following rule:
+<P>
+
+type=EventGroup2
+<BR>
+
+ptype=SubStr
+<BR>
+
+pattern=EVENT_A
+<BR>
+
+thresh=2
+<BR>
+
+ptype2=SubStr
+<BR>
+
+pattern2=EVENT_B
+<BR>
+
+thresh2=2
+<BR>
+
+desc=Sequence of two or more As and Bs with 'A B' at the end
+<BR>
+
+action=write - %s
+<BR>
+
+egptype=RegExp
+<BR>
+
+egpattern=1 2$
+<BR>
+
+window=60
+<P>
+
+Also, suppose the following events occur, and each event timestamp reflects 
+the time SEC observes the event: 
+<P>
+
+Mar 10 12:05:31 EVENT_B
+<BR>
+
+Mar 10 12:05:32 EVENT_B
+<BR>
+
+Mar 10 12:05:38 EVENT_A
+<BR>
+
+Mar 10 12:05:39 EVENT_A
+<BR>
+
+Mar 10 12:05:42 EVENT_B
+<P>
+
+When these events are observed by the above EventGroup2 rule, the rule
+starts an event correlation operation at 12:05:31. When the fourth event
+appears at 12:05:39, all threshold conditions
+<I></I>(<I>thresh=2</I>
+
+and
+<I>thresh2=2</I>)
+
+become satisfied, and therefore the following event group string is built 
+from the first four events:
+<P>
+
+2 2 1 1
+<P>
+
+However, since this string does not match the regular expression
+<P>
+
+1 2$
+<P>
+
+that has been given with the
+<I>egpattern</I>
+
+field, the operation will not execute the action list given with the 
+<I>action</I>
+
+field. When the fifth event appears at 12:05:42, all threshold conditions 
+are again satisfied, and all observed events produce the following 
+event group string:
+<P>
+
+2 2 1 1 2
+<P>
+
+Since this event group string matches the regular expression given with the
+<I>egpattern</I>
+
+field, the operation will write the string
+&quot;Sequence of two or more As and Bs with 'A B' at the end&quot;
+to standard output with the
+<I>write</I>
+
+action.
+<P>
+
+If the rule definition has an optional action list defined with the
+<I>countK</I>
+
+field for event eK, the operation executes it every time an instance of eK 
+is observed (even if
+<I>multact</I>
+
+is set to No and the operation has already executed the action list given
+with
+<I>action</I>).
+
+If the action list contains match variables, they are substituted before
+*each* execution with values from matching the current instance of eK.
+<P>
+
+If the rule definition has an optional action list defined with the
+<I>init</I>
+
+field, the operation executes it immediately after the operation has been
+created. 
+<P>
+
+If the rule definition has an optional action list defined with the
+<I>end</I>
+
+field, the operation executes it immediately before the operation finishes.
+Note that this action list is *not* executed when the operation is
+terminated with the
+<I>reset</I>
+
+action.
+<P>
+
+If the rule definition has an optional action list defined with the
 <I>slide</I>
 
-fields.
+field, the operation executes it immediately after the event correlation 
+window has slidden forward.
+However, note that moving the window with the
+<I>setwpos</I>
+
+action will *not* trigger the execution.
 <P>
 
 <B>Examples:</B>
@@ -5685,7 +6113,7 @@ for that IP address. The operation sends an e-mail warning to <A HREF="mailto:ro
 if within 120 seconds three threshold conditions are satisfied for the IP
 address it tracks -- 
 (1) at least two SSH login failure events have occurred for this client IP,
-(2) at least three Apache 4xx events have occured for this client IP, 
+(2) at least three Apache 4xx events have occurred for this client IP, 
 (3) at least five iptables events have been observed for this source IP. 
 <P>
 
@@ -5788,7 +6216,7 @@ Therefore, the operation would send three additional e-mails at 01:14:18,
 01:14:19, and 01:14:34. 
 Also, the operation would not terminate after its window ends at 01:14:52,
 but would rather slide the window forward and expect new events.
-At the occurence of any iptables, SSH login failure or Apache 4xx event
+At the occurrence of any iptables, SSH login failure or Apache 4xx event
 for 192.168.1.104, the operation would produce a warning e-mail
 if all threshold conditions are fulfilled.
 <P>
@@ -5908,14 +6336,11 @@ which also drops its alias name LOGIN_FAILED_risto_10.1.2.7.
 <A NAME="lbAT">&nbsp;</A>
 <H3>SUPPRESS RULE</H3>
 
-The
-<B>Suppress</B>
+The Suppress rule supports the following fields.
+Note that match variables may be used in the
+<I>context</I>
 
-rule takes no action when an event has matched the rule, and keeps
-matching events from being processed by later rules in the configuration file. 
-<P>
-
-The Suppress rule supports the following fields:
+field. 
 <DL COMPACT>
 <DT><I>type</I>
 
@@ -5948,16 +6373,19 @@ remarks and comments.
 </DL>
 <P>
 
-Note that match variables may be used in the
-<I>context</I>
+The
+<B>Suppress</B>
 
-field. 
-Also note that this rule does not start an event correlation operation,
+rule takes no action when an event has matched the rule, and keeps
+matching events from being processed by later rules in the configuration file. 
+<P>
+
+Note that the Suppress rule does not start event correlation operations,
 and the optional
 <I>desc</I>
 
 field is merely used for describing the rule.
-Finally, in order to end event processing, so that no further rules from
+Also, in order to end event processing, so that no further rules from
 any of the configuration files would be tried, use the Jump rule.
 <P>
 
@@ -6004,6 +6432,35 @@ source IP address, so that they will not be matched
 against the second rule during 3600 seconds after sending an e-mail warning.
 <A NAME="lbAU">&nbsp;</A>
 <H3>CALENDAR RULE</H3>
+
+The Calendar rule supports the following fields.
+<DL COMPACT>
+<DT><I>type</I>
+
+<DD>
+fixed to Calendar (value is case insensitive).
+<DT><I>time</I>
+
+<DD>
+time specification.
+<DT><I>context</I> (optional)
+
+<DD>
+context expression.
+<DT><I>desc</I>
+
+<DD>
+operation description string.
+<DT><I>action</I>
+
+<DD>
+action list.
+<DT><I>rem</I> (optional, may appear more than once)
+
+<DD>
+remarks and comments.
+</DL>
+<P>
 
 The
 <B>Calendar</B>
@@ -6065,36 +6522,8 @@ minute, the Calendar rule will execute the action list in the middle of
 this minute when the expression value becomes TRUE.
 <P>
 
-The Calendar rule supports the following fields:
-<DL COMPACT>
-<DT><I>type</I>
-
-<DD>
-fixed to Calendar (value is case insensitive).
-<DT><I>time</I>
-
-<DD>
-time specification.
-<DT><I>context</I> (optional)
-
-<DD>
-context expression.
-<DT><I>desc</I>
-
-<DD>
-operation description string.
-<DT><I>action</I>
-
-<DD>
-action list.
-<DT><I>rem</I> (optional, may appear more than once)
-
-<DD>
-remarks and comments.
-</DL>
-<P>
-
-Note that this rule does not start event correlation operation, and the
+Note that the Calendar rule does not start event correlation operations, 
+and the
 <I>desc</I>
 
 field is merely used for setting the %s action list variable.
@@ -6167,6 +6596,62 @@ has not arrived by 2:30AM, the operation sends an e-mail warning to
 <A NAME="lbAV">&nbsp;</A>
 <H3>JUMP RULE</H3>
 
+The Jump rule supports the following fields.
+Note that match variables may be used in the
+<I>context</I>
+
+field. They may also be used in the
+<I>cfset</I>
+
+field, provided that the 
+<I>constset </I>
+
+field is set to No.
+<DL COMPACT>
+<DT><I>type</I>
+
+<DD>
+fixed to Jump (value is case insensitive).
+<DT><I>continue</I> (optional)
+
+<DD>
+TakeNext, DontCont, EndMatch or GoTo &lt;label&gt; (apart from &lt;label&gt;, 
+values are case insensitive).
+<DT><I>ptype</I>
+
+<DD>
+pattern type (value is case insensitive).
+<DT><I>pattern</I>
+
+<DD>
+pattern.
+<DT><I>varmap</I> (optional)
+
+<DD>
+variable map.
+<DT><I>context</I> (optional)
+
+<DD>
+context expression.
+<DT><I>cfset</I> (optional)
+
+<DD>
+configuration file set names that are separated by whitespace.
+<DT><I>constset</I> (optional)
+
+<DD>
+Yes or No (values are case insensitive, default is Yes). 
+<DT><I>desc</I> (optional)
+
+<DD>
+string for describing the rule.
+<DT><I>rem</I> (optional, may appear more than once)
+
+<DD>
+remarks and comments.
+</DL>
+<P>
+
 The
 <B>Jump</B>
 
@@ -6221,63 +6706,7 @@ is set to EndMatch, processing of the matching event ends (i.e.,
 no further rules from any of the configuration files will be tried).
 <P>
 
-The Jump rule supports the following fields:
-<DL COMPACT>
-<DT><I>type</I>
-
-<DD>
-fixed to Jump (value is case insensitive).
-<DT><I>continue</I> (optional)
-
-<DD>
-TakeNext, DontCont, EndMatch or GoTo &lt;label&gt; (apart from &lt;label&gt;, 
-values are case insensitive).
-<DT><I>ptype</I>
-
-<DD>
-pattern type (value is case insensitive).
-<DT><I>pattern</I>
-
-<DD>
-pattern.
-<DT><I>varmap</I> (optional)
-
-<DD>
-variable map.
-<DT><I>context</I> (optional)
-
-<DD>
-context expression.
-<DT><I>cfset</I> (optional)
-
-<DD>
-configuration file set names that are separated by whitespace.
-<DT><I>constset</I> (optional)
-
-<DD>
-Yes or No (values are case insensitive, default is Yes). 
-<DT><I>desc</I> (optional)
-
-<DD>
-string for describing the rule.
-<DT><I>rem</I> (optional, may appear more than once)
-
-<DD>
-remarks and comments.
-</DL>
-<P>
-
-Note that match variables may be used in the
-<I>context</I>
-
-field. They may also be used in the
-<I>cfset</I>
-
-field, provided that the 
-<I>constset </I>
-
-field is set to No.
-Also note that this rule does not start event correlation operations,
+Note that the Jump rule does not start event correlation operations, 
 and the optional
 <I>desc</I>
 
@@ -6312,6 +6741,27 @@ are tried.
 <A NAME="lbAW">&nbsp;</A>
 <H3>OPTIONS RULE</H3>
 
+The Options rule supports the following fields.
+<DL COMPACT>
+<DT><I>type</I>
+
+<DD>
+fixed to Options (value is case insensitive).
+<DT><I>joincfset</I> (optional)
+
+<DD>
+configuration file set names that are separated by whitespace.
+<DT><I>procallin</I> (optional)
+
+<DD>
+Yes or No (values are case insensitive, default is Yes). 
+<DT><I>rem</I> (optional, may appear more than once)
+
+<DD>
+remarks and comments.
+</DL>
+<P>
+
 The
 <B>Options</B>
 
@@ -6336,27 +6786,6 @@ If the
 
 field is set to No, the rules from the configuration file will be
 used for matching input from Jump rules only.
-<P>
-
-The Options rule supports the following fields:
-<DL COMPACT>
-<DT><I>type</I>
-
-<DD>
-fixed to Options (value is case insensitive).
-<DT><I>joincfset</I> (optional)
-
-<DD>
-configuration file set names that are separated by whitespace.
-<DT><I>procallin</I> (optional)
-
-<DD>
-Yes or No (values are case insensitive, default is Yes). 
-<DT><I>rem</I> (optional, may appear more than once)
-
-<DD>
-remarks and comments.
-</DL>
 <P>
 
 <B>Examples:</B>
@@ -7407,9 +7836,35 @@ receiving input lines from the port 10514/tcp. All input lines from
 /var/log/messages and 10514/tcp are matched by the second rule and
 written to standard output.
 <A NAME="lbBA">&nbsp;</A>
-<H2>INTERPROCESS COMMUNICATION</H2>
+<H2>CHILD PROCESSES</H2>
 
 The SingleWithScript rule and
+<I>shellcmd</I>,
+
+<I>spawn</I>,
+
+<I>cspawn</I>,
+
+<I>cmdexec</I>,
+
+<I>spawnexec</I>,
+
+<I>cspawnexec</I>,
+
+<I>pipe</I>,
+
+<I>pipeexec</I>,
+
+<I>report</I>,
+
+and
+<I>reportexec</I>
+
+actions fork a child process for executing an external program. 
+For the SingleWithScript rule with 
+<I>shell=yes</I>
+
+setting and for
 <I>shellcmd</I>,
 
 <I>spawn</I>,
@@ -7421,17 +7876,44 @@ The SingleWithScript rule and
 and
 <I>report</I>
 
-actions fork a child process for executing an external program. 
-If the program command line contains shell metacharacters, the command
+actions, the following rule applies --
+if the program command line contains shell metacharacters, the command
 line is first parsed by the shell which then starts the program.
+For the SingleWithScript rule with 
+<I>shell=no</I>
+
+setting and for
+<I>cmdexec</I>,
+
+<I>spawnexec</I>,
+
+<I>cspawnexec</I>,
+
+<I>pipeexec</I>,
+
+and
+<I>reportexec</I>
+
+actions, the program command line is not parsed by shell, 
+even if shell metacharacters are present in the command line.
+<P>
+
 SEC communicates with its child processes through pipes (created with the 
 <B><A HREF="/cgi-bin/man/man2html?2+pipe">pipe</A></B>(2)
 
 system call). 
 When the child process is at the read end of the pipe, data have to be written
 to the pipe in blocking mode which ensures reliable data transmission. 
-In order to avoid being blocked, SEC forks another child process for writing 
-data to the pipe reliably.
+In order to avoid being blocked, SEC forks another SEC process for writing 
+data to the pipe reliably. The newly created SEC process will then fork
+the child process, managing the child process on behalf of the main 
+SEC process (i.e., the main SEC process is the grandparent process for 
+the child). For example, if the SEC process that manages the child receives
+the
+<B>SIGTERM</B>
+
+signal, the signal will be forwarded to the child process, and when the child
+process terminates, its exit code will be reported to the main SEC process.
 <P>
 
 After forking an external program, SEC continues immediately, and checks
@@ -7451,7 +7933,7 @@ then the child must install a handler for the
 <B>SIGTERM </B>
 
 signal. 
-Note that if the program command line contains shell metacharacters,
+Note that if the program command line is parsed by shell,
 the parsing shell will run as a child process of SEC and the parent 
 process of the program. Therefore, the 
 <B>SIGTERM</B>
@@ -7483,7 +7965,7 @@ use the shell &amp;&amp; operator and write
 
 <P>
 
-Sometimes it is desireable to start an external program and provide it with
+Sometimes it is desirable to start an external program and provide it with
 data from several rules. In order to create such setup, named pipes can be 
 harnessed. For example, if /var/log/pipe is a named pipe, then
 <P>
@@ -8563,7 +9045,7 @@ The author also thanks the following people for supplying software patches,
 documentation fixes, and suggesting new features:
 Al Sorrell, Brian Mielke, David Lang, James Brown, Jon Frazier, Mark D. Nagel, 
 Peter Eckel, Rick Casey, and William Gertz. 
-Last but not least, the author expresses his profound gratitute to 
+Last but not least, the author expresses his profound gratitude to 
 John P. Rouillard for many great ideas and creative discussions that have 
 helped to develop SEC.
 <A NAME="lbBK">&nbsp;</A>
@@ -8572,6 +9054,8 @@ helped to develop SEC.
 <B><A HREF="/cgi-bin/man/man2html?8+cron">cron</A></B>(8),
 
 <B><A HREF="/cgi-bin/man/man2html?1+crontab">crontab</A></B>(1),
+
+<B><A HREF="/cgi-bin/man/man2html?3+execvp">execvp</A></B>(3),
 
 <B><A HREF="/cgi-bin/man/man2html?2+fork">fork</A></B>(2),
 
@@ -8605,6 +9089,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 12:55:24 GMT, May 02, 2020
+Time: 18:49:44 GMT, March 12, 2021
 </BODY>
 </HTML>
