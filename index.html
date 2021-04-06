@@ -28,12 +28,18 @@ harnessed for event log monitoring, for network and security management, for
 fraud detection, and for any other task which involves event correlation.
 Event correlation is a procedure where a stream of events is processed, 
 in order to detect (and act on) certain event groups that occur within 
-predefined time windows. Unlike many other event correlation products which 
-are heavyweight solutions, SEC is a lightweight and platform-independent 
-event correlator which runs as a single process. The user can start it as a
-daemon, employ it in shell pipelines, execute it interactively in a terminal, 
-run many SEC processes simultaneously for different tasks, and use it in a 
-wide variety of other ways.
+predefined time windows. 
+<p>
+Many traditional event log management systems store events in a database and
+execute database queries for implementing event correlation. However, such
+systems are heavyweight solutions and often involve a complex database
+infrastructure on dedicated hardware.
+<p>
+In contrast, SEC is a lightweight and platform-independent event correlator 
+which runs as a single process. The user can start it as a daemon, employ it 
+in shell pipelines, execute it interactively in a terminal, run many SEC 
+processes simultaneously for different tasks, and use it in a wide variety of 
+other ways.
 <p>
 SEC reads lines from files, named pipes, or standard input, 
 matches the lines with patterns (like regular expressions or Perl subroutines) 
