@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: March 2021<BR>
+Section: User Commands  (1)<BR>Updated: May 2021<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -7898,6 +7898,70 @@ actions, the program command line is not parsed by shell,
 even if shell metacharacters are present in the command line.
 <P>
 
+Disabling shell parsing for command lines can be useful for avoiding unwanted
+side effects. For example, consider the following badly written rule for
+sending an e-mail to a local user if 10 SSH login failures have been observed
+for this user from the same IP address during 300 seconds:
+<P>
+
+type=SingleWithThreshold
+<BR>
+
+ptype=RegExp
+<BR>
+
+pattern=sshd\[\d+\]: Failed .+ for (.+) from ([\d.]+) port \d+ ssh2
+<BR>
+
+desc=Failed SSH logins for user $1 from $2
+<BR>
+
+action=pipe 'Failed SSH logins from $2' /bin/mail -s alert $1
+<BR>
+
+window=300
+<BR>
+
+thresh=10
+<P>
+
+Unfortunately, the above rule allows for the execution of arbitrary command 
+lines with the privileges of the SEC process. 
+For example, consider the following malicious command line for providing
+fake input events for the rule:
+<P>
+
+logger -p authpriv.info -t sshd -i 'Failed password for `/usr/bin/touch /tmp/test` from 127.0.0.1 port 12345 ssh2'
+<P>
+
+When this command line is repeatedly executed, the attacker is able to trigger 
+the execution of the command line
+<I>/bin/mail -s alert `/usr/bin/touch /tmp/test`</I>.
+
+However, this command line is parsed by shell that triggers the execution
+of the command line specified by the attacker:
+<I>/usr/bin/touch /tmp/test</I>.
+
+For fixing this issue, the
+<I>pipe</I>
+
+action can be replaced with
+<I>pipeexec</I>
+
+which will disable the shell parsing:
+<P>
+
+action=pipeexec 'Failed SSH logins from $2' /bin/mail -s alert $1
+<P>
+
+As another workaround, the regular expression pattern of the rule can be 
+modified to match user names that do not contain shell metacharacters, 
+for example:
+<P>
+
+pattern=sshd\[\d+\]: Failed .+ for ([\w.-]+) from ([\d.]+) port \d+ ssh2
+<P>
+
 SEC communicates with its child processes through pipes (created with the 
 <B><A HREF="/cgi-bin/man/man2html?2+pipe">pipe</A></B>(2)
 
@@ -9089,6 +9153,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 18:49:44 GMT, March 12, 2021
+Time: 14:35:20 GMT, May 12, 2021
 </BODY>
 </HTML>
