@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: May 2021<BR>
+Section: User Commands  (1)<BR>Updated: May 2022<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -294,6 +294,8 @@ as returned by the
 <B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
 
 system call, *not* the timestamp extracted from the event. 
+<P>
+
 Suppose that after 25 seconds, 
 a similar SSH login failure event for the same user name is observed. In this
 case, a running operation will be found for the operation description string
@@ -452,6 +454,8 @@ the operation will emit the synthetic event
 3_SSH_LOGIN_FAILURES_FOR_&lt;username&gt;. Although synthetic events are created
 by SEC, they are treated like regular events received from input sources and 
 are matched against rules. 
+<P>
+
 The regular expression pattern of the second rule will match the
 3_SSH_LOGIN_FAILURES_FOR_&lt;username&gt; event and start a new event correlation
 operation if no such events have been previously seen.  
@@ -467,7 +471,9 @@ expression in the
 <I>context</I>
 
 field; see CONTEXTS AND CONTEXT EXPRESSIONS section for more information). 
-The operation started by the rule sends an e-mail warning to the local 
+<P>
+
+The operation started by the second rule sends an e-mail warning to the local 
 root-user if 30 synthetic events have been observed within 1 minute (see the
 <I>thresh</I>
 
@@ -5484,6 +5490,8 @@ Note that match variables may be used in
 
 <I>count*</I>,
 
+<I>egtoken*</I>,
+
 <I>desc</I>,
 
 <I>action</I>,
@@ -5555,6 +5563,13 @@ and
 <I>context </I>
 
 (value is an integer constant, default is 1).
+<DT><I>egtoken</I> (optional)
+
+<DD>
+token for building the event group string that is matched with
+<I>egpattern </I>
+
+(default value is 1).
 <DT><B>...</B>
 
 <DD>
@@ -5610,6 +5625,13 @@ and
 <I>contextN</I>
 
 (value is an integer constant, default is 1).
+<DT><I>egtokenN</I> (optional)
+
+<DD>
+token for building the event group string that is matched with
+<I>egpattern</I>
+
+(default value is N).
 <DT><I>desc</I>
 
 <DD>
@@ -5857,12 +5879,27 @@ and
 <I>egptype</I>
 
 fields, the event group pattern is used for matching the event group string.
-The event group string consists of positive integers Xi that are separated 
+The event group string consists of tokens Xi that are separated 
 by a single space character:
 &quot;X1 X2 ... XM&quot;. 
 M is the number of events a given event correlation operation has observed 
-within its event correlation window. Also, if the i-th event that the event
-correlation operation has observed is an instance of event eK, then Xi = K.
+within its event correlation window. 
+<P>
+
+If the i-th event that the event
+correlation operation has observed is an instance of event eK, then Xi is set
+as follows. If the rule definition has a token defined with the
+<I>egtokenK</I>
+
+field for event eK, Xi is set to that token (the token definition may contain 
+match variables that are substituted with values from matching the current
+instance of eK). 
+If the rule does not have the
+<I>egtokenK</I>
+
+field, then Xi = K (note that K is a positive integer).
+<P>
+
 Event group string is built and matched with event group pattern after all
 threshold conditions (given with
 <I>thresh*</I>
@@ -5891,14 +5928,17 @@ field defines a regular expression, while in the case of SubStr and NSubStr
 <I>egpattern</I>
 
 provides a string pattern.
+<P>
+
 If the
 <I>egptype</I>
 
-field is set to PerlFunc or NPerlFunc, event group string is the only
-parameter for the Perl function given with the
+field is set to PerlFunc or NPerlFunc, the Perl function given with the
 <I>egpattern</I>
 
-field, and the function is called in the Perl scalar context. 
+field is called in the Perl scalar context, with the function having two 
+parameters: the event group string, and the reference to the list of tokens 
+from the event group string.
 With 
 <I>egptype=PerlFunc</I>,
 
@@ -6057,6 +6097,19 @@ However, note that moving the window with the
 <I>setwpos</I>
 
 action will *not* trigger the execution.
+<P>
+
+Also note that when the event correlation window slides forward, 
+the event group pattern (given with the
+<I>egpattern</I>
+
+field) and numeric threshold conditions (given with
+<I>thresh*</I>
+
+fields) will *not* be evaluated for checking if the action list given with the
+<I>action</I>
+
+field should be executed.
 <P>
 
 <B>Examples:</B>
@@ -6333,6 +6386,91 @@ about 10.1.2.7 to <A HREF="mailto:root@localhost">root@localhost</A>. After that
 all further matching events for 10.1.2.7 until 19:02:06, and then terminates. 
 Immediately before termination, the operation deletes the context OPER_10.1.2.7
 which also drops its alias name LOGIN_FAILED_risto_10.1.2.7.
+<P>
+
+The following example rule correlates SSH login failure events:
+<P>
+
+type=EventGroup
+<BR>
+
+ptype=RegExp
+<BR>
+
+pattern=sshd\[\d+\]: Failed .+ for (\S+) from ([\d.]+) port \d+ ssh2
+<BR>
+
+desc=SSH login failures from three different hosts within 1m for user $1
+<BR>
+
+egtoken=$2
+<BR>
+
+egptype=PerlFunc
+<BR>
+
+egpattern=sub { my(%hosts) = map { $_ =&gt; 1 } @{$_[1]}; \
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;scalar(keys&nbsp;%hosts)&nbsp;&gt;=&nbsp;3;&nbsp;}
+<BR>
+
+action=pipe '%t: %s' /bin/mail <A HREF="mailto:root@localhost">root@localhost</A>
+<BR>
+
+window=60
+<BR>
+
+thresh=3
+<P>
+
+The rule runs event correlation operations for counting the number of SSH
+login failure events. Each operation counts events for one user name, and
+if the operation has observed login failures from three different hosts 
+within 60 seconds, it sends an e-mail warning to <A HREF="mailto:root@localhost">root@localhost</A>. 
+For verifying that hosts are different, the
+<I>egtoken</I>
+
+field configures the use of host IP addresses as tokens for building 
+the event group string. Also, the Perl function provided with the
+<I>egpattern </I>
+
+field checks if the list of tokens contains at least three unique IP addresses.
+Note that the list of tokens is referenced by the second input parameter 
+($_[1]) of the function, while the first input parameter ($_[0]) holds 
+the event group string (the above Perl function only processes the list of 
+tokens).
+<P>
+
+Suppose the following events are generated by an SSH daemon,
+and each event timestamp reflects the time SEC observes the event:
+<P>
+
+Apr  4 23:04:00 test sshd[21137]: Failed password for risto from 10.1.1.7 port 32182 ssh2
+<BR>
+
+Apr  4 23:04:03 test sshd[21145]: Failed password for risto from 10.1.1.9 port 42176 ssh2
+<BR>
+
+Apr  4 23:04:04 test sshd[21212]: Failed password for risto from 10.1.1.7 port 34191 ssh2
+<BR>
+
+Apr  4 23:04:07 test sshd[21226]: Failed password for risto from 10.1.1.2 port 18999 ssh2
+<P>
+
+When the first event is observed at 23:04:00, a counting operation is started 
+for user risto. Since at 23:04:04 the operation observes the third event,
+the threshold condition given with the
+<I>thresh</I>
+
+field becomes satisfied, and thus the event group pattern given with the 
+<I>egpattern</I>
+
+field is evaluated. However, the list of tokens (10.1.1.7, 10.1.1.9, 10.1.1.7)
+contains only two unique elements, and therefore the event group pattern does 
+not match.
+When the fourth event occurs at 23:04:07, event group pattern is evaluated
+again, and since the list of tokens (10.1.1.7, 10.1.1.9, 10.1.1.7, 10.1.1.2) 
+contains three unique elements now, the event group pattern matches and
+the operation will send an e-mail warning to <A HREF="mailto:root@localhost">root@localhost</A>.
 <A NAME="lbAT">&nbsp;</A>
 <H3>SUPPRESS RULE</H3>
 
@@ -9153,6 +9291,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 14:35:20 GMT, May 12, 2021
+Time: 15:06:09 GMT, May 04, 2022
 </BODY>
 </HTML>
