@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: May 2022<BR>
+Section: User Commands  (1)<BR>Updated: June 2023<BR>
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -48,6 +48,7 @@ Section: User Commands  (1)<BR>Updated: May 2022<BR>
 <DT><A HREF="#lbBJ">ACKNOWLEDGMENTS</A><DD>
 <DT><A HREF="#lbBK">SEE ALSO</A><DD>
 </DL>
+
 <HR>
 
 <A NAME="lbAB">&nbsp;</A>
@@ -5936,9 +5937,17 @@ If the
 field is set to PerlFunc or NPerlFunc, the Perl function given with the
 <I>egpattern</I>
 
-field is called in the Perl scalar context, with the function having two 
-parameters: the event group string, and the reference to the list of tokens 
-from the event group string.
+field is called in the Perl scalar context, with the function having three
+parameters: the event group string, the reference to the list of tokens 
+from the event group string, and the reference to the list of event
+occurrence times that correspond to tokens. 
+Each event occurrence time is provided in seconds since Epoch, 
+with the first element in the list being the occurrence time
+of the event represented by the first token in the event group string,
+the second element in the list being the occurrence time of the event
+represented by the second token in the event group string, etc. 
+<P>
+
 With 
 <I>egptype=PerlFunc</I>,
 
@@ -9238,7 +9247,7 @@ variable to C when reading this man page (e.g., env LANG=C man sec).
 <A NAME="lbBI">&nbsp;</A>
 <H2>AUTHOR</H2>
 
-Risto Vaarandi (ristov at users d0t s0urcef0rge d0t net)
+Risto Vaarandi (firstname d0t lastname at gmail d0t c0m)
 <A NAME="lbBJ">&nbsp;</A>
 <H2>ACKNOWLEDGMENTS</H2>
 
@@ -9291,6 +9300,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 15:06:09 GMT, May 04, 2022
+Time: 16:07:24 GMT, June 03, 2023
 </BODY>
 </HTML>
