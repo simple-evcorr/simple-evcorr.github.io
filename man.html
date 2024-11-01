@@ -2,7 +2,8 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: June 2023<BR>
+Section: User Commands  (1)<BR>Updated: November 2024<BR>
+
 <HR>
 
 <A NAME="index">&nbsp;</A><H2>Index</H2>
@@ -2516,11 +2517,12 @@ tabulation character.
 
 <DD>
 space character.
-<DT><I>%.chr0, ..., %.chr31</I>
+<DT><I>%.chr0, ..., %.chr255</I>
 
 <DD>
-ASCII 0..31 control characters (e.g., %.chr7 is bell and %.chr12 is 
-form feed character).
+ASCII 0..255 characters (e.g., %.chr7 is bell and %.chr12 is form feed 
+character, whereas the sequence %.chr195%.chr132 is A-umlaut character
+in UTF-8 encoding).
 </DL>
 <P>
 
@@ -8101,6 +8103,10 @@ which will disable the shell parsing:
 action=pipeexec 'Failed SSH logins from $2' /bin/mail -s alert $1
 <P>
 
+However, when using that approach, you *must* make sure that the data passed
+to an external program is handled without any unexpected side effects.
+<P>
+
 As another workaround, the regular expression pattern of the rule can be 
 modified to match user names that do not contain shell metacharacters, 
 for example:
@@ -9300,6 +9306,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 16:07:24 GMT, June 03, 2023
+Time: 19:17:50 GMT, November 01, 2024
 </BODY>
 </HTML>
