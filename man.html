@@ -2,7 +2,7 @@
 <HTML><HEAD><TITLE>Man page of sec</TITLE>
 </HEAD><BODY>
 <H1>sec</H1>
-Section: User Commands  (1)<BR>Updated: November 2024<BR>
+Section: User Commands  (1)<BR>Updated: February 2026<BR>
 
 <HR>
 
@@ -3277,6 +3277,55 @@ Remove the first string from the event store of context &lt;name&gt;, and assign
 it to the action list variable %&lt;var&gt;. If the event store is empty, %&lt;var&gt; 
 is set to empty string.
 If the context &lt;name&gt; does not exist, the value of %&lt;var&gt; does not change.
+<DT><I>trim &lt;time&gt; &lt;name&gt; [%&lt;var&gt;]</I>
+
+<DD>
+Find the strings which were written to the event store of context &lt;name&gt;
+before &lt;time&gt; and remove them from the event store. If action list variable 
+%&lt;var&gt; is provided, removed strings are arranged in the same order s1,...,sk
+in which they appeared in the event store, and are assigned to variable %&lt;var&gt; 
+as a multi-line string &quot;s1&lt;NEWLINE&gt;...&lt;NEWLINE&gt;sk&quot;.
+If the context &lt;name&gt; does not exist, the value of %&lt;var&gt; does not change.
+The &lt;time&gt; parameter must either evaluate to seconds since Epoch (as reported 
+by the
+<B><A HREF="/cgi-bin/man/man2html?2+time">time</A></B>(2)
+
+system call), or to a positive or negative offset in seconds which is preceded 
+by the plus (+) or minus (-) sign, respectively.
+Negative offset -T represents the current time minus T seconds, whereas 
+positive offset +T represents the creation time of context &lt;name&gt; plus T 
+seconds. For example, consider the following action list definition:
+<P>
+action=trim -10 TEST; trim +15 TEST2
+<P>
+If this action list is executed at 12:23:50, all strings which were written 
+to the event store of TEST before 12:23:40 are removed from the event store.
+In addition, if the creation time of context TEST2 is 12:23:05, all strings 
+which were written to the event store of TEST2 before 12:23:20 are removed 
+from the event store. 
+As another example, consider the following action list definition:
+<P>
+action=getwpos %pos 0; trim %pos TEST %data
+<P>
+This action list uses the
+<I>getwpos</I>
+
+action to set the %pos variable to the beginning of the event 
+correlation window for the current event correlation operation (see the
+<I>getwpos</I>
+
+action for more information). The action list then uses the
+<I>trim</I>
+
+action to find all strings which were written to the event store of TEST 
+before the time reflected by %pos. These strings are removed from the event 
+store and assigned to the %data variable as a multi-line string. 
+For example, if the event store of TEST contains the strings &quot;abc&quot;, &quot;def&quot;, 
+and &quot;xyz&quot; (in that order), and the first and second string are removed from 
+the event store by
+<I>trim</I>,
+
+then %data is set to &quot;abc&lt;NEWLINE&gt;def&quot;.
 <DT><I>exists %&lt;var&gt; &lt;name&gt;</I>
 
 <DD>
@@ -9257,7 +9306,7 @@ Risto Vaarandi (firstname d0t lastname at gmail d0t c0m)
 <A NAME="lbBJ">&nbsp;</A>
 <H2>ACKNOWLEDGMENTS</H2>
 
-The author is grateful to SEB Estonia for supporting this work.
+The author is grateful to TalTech and SEB Estonia for supporting this work.
 The author also thanks the following people for supplying software patches,
 documentation fixes, and suggesting new features:
 Al Sorrell, Brian Mielke, David Lang, James Brown, Jon Frazier, Mark D. Nagel, 
@@ -9306,6 +9355,6 @@ helped to develop SEC.
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 19:17:50 GMT, November 01, 2024
+Time: 17:01:05 GMT, February 12, 2026
 </BODY>
 </HTML>
